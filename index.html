@@ -1,63 +1,30 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Остаток наличных</title>
-    <style>
-        .message {
-            margin-top: 10px;
-            padding: 10px;
-            display: none;
-        }
-        .success {
-            color: green;
-            background-color: #e8f5e9;
-            border: 1px solid #81c784;
-            border-radius: 4px;
-        }
-        .error {
-            color: red;
-            background-color: #ffebee;
-            border: 1px solid #e57373;
-            border-radius: 4px;
-        }
-    </style>
-</head>
+<!-- ... (head остается без изменений) ... -->
 <body>
-    <h2>Выберите дату:</h2>
-    <input type="date" id="datePicker">
-    
-    <h3>Остаток наличных: <span id="cashBalance">—</span></h3>
-    
-    <label>Продажи: <input type="number" id="sales" value="0"></label><br>
-    <label>Расходы: <input type="number" id="expenses" value="0"></label><br>
-    
-    <button onclick="calculateTotal()">Рассчитать итог</button>
-    
-    <h3>Итоговая сумма: <span id="totalBalance">—</span></h3>
-    
-    <button onclick="saveToSheet()">Сохранить в таблицу</button>
-    
-    <div id="statusMessage" class="message"></div>
-
+    <!-- ... (body HTML остается без изменений) ... -->
     <script>
-        const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s";
-        const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
-        let selectedRow = 0;
-        let selectedDate = null;
+        // ... (начало скрипта остается без изменений) ...
 
-        // Функция для получения локальной даты с учетом часового пояса
+        // Обновленная функция получения локальной даты
         function getLocalDate(date = new Date()) {
-            const offset = 5; // UTC+5
-            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-            return new Date(utc + (3600000 * offset));
+            // Создаем новую дату, добавляя 5 часов к UTC
+            const localDate = new Date(date.getTime() + (5 * 60 * 60 * 1000));
+            
+            // Проверяем, если после добавления 5 часов мы перешли на следующий день
+            if (localDate.getHours() >= 0 && localDate.getHours() < 5) {
+                localDate.setDate(localDate.getDate() - 1);
+            }
+            
+            // Устанавливаем время на начало дня
+            localDate.setHours(0, 0, 0, 0);
+            return localDate;
         }
 
         window.onload = function() {
             try {
                 const today = getLocalDate();
+                console.log('Local date:', today); // Для отладки
                 document.getElementById("datePicker").valueAsDate = today;
                 handleDateSelection(today);
             } catch (error) {
@@ -65,159 +32,35 @@
             }
         };
 
-        async function fetchData(month) {
-            try {
-                const sheetName = getSheetNameForMonth(month);
-                const RANGE = `${sheetName}!G1:G100`;
-                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                return data.values || [];
-            } catch (error) {
-                showMessage('Ошибка получения данных: ' + error.message, true);
-                return [];
-            }
-        }
-
-        function getSheetNameForMonth(date) {
-            const months = [
-                'Январь', 'Февраль', 'Март', 'Апрель', 
-                'Май', 'Июнь', 'Июль', 'Август',
-                'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-            ];
-            return months[date.getMonth()];
-        }
-
-        async function loadPreviousDayData(currentDate) {
-            try {
-                const previousDay = new Date(currentDate);
-                previousDay.setDate(currentDate.getDate() - 1);
-                
-                const cashData = await fetchData(previousDay);
-                const prevDayRow = previousDay.getDate();
-                
-                if (cashData[prevDayRow - 1]) {
-                    document.getElementById("cashBalance").innerText = cashData[prevDayRow - 1][0];
-                } else {
-                    if (currentDate.getDate() === 1) {
-                        const lastMonthDate = new Date(currentDate);
-                        lastMonthDate.setDate(0);
-                        const lastMonthData = await fetchData(lastMonthDate);
-                        const lastDayOfMonth = lastMonthDate.getDate();
-                        
-                        if (lastMonthData[lastDayOfMonth - 1]) {
-                            document.getElementById("cashBalance").innerText = lastMonthData[lastDayOfMonth - 1][0];
-                        } else {
-                            document.getElementById("cashBalance").innerText = "0";
-                        }
-                    } else {
-                        document.getElementById("cashBalance").innerText = "0";
-                    }
-                }
-            } catch (error) {
-                showMessage('Ошибка загрузки данных: ' + error.message, true);
-            }
-        }
+        // Обновленный обработчик выбора даты
+        document.getElementById("datePicker").addEventListener("change", function() {
+            const selectedDate = new Date(this.value);
+            const localDate = getLocalDate(selectedDate);
+            handleDateSelection(localDate);
+        });
 
         function handleDateSelection(date) {
             selectedRow = date.getDate();
-            selectedDate = date; // Сохраняем выбранную дату
+            selectedDate = date;
+            console.log('Selected date:', date); // Для отладки
             loadPreviousDayData(date);
         }
 
-        document.getElementById("datePicker").addEventListener("change", function() {
-            const date = new Date(this.value);
-            handleDateSelection(date);
-        });
-
-        function calculateTotal() {
-            try {
-                const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
-                const sales = parseFloat(document.getElementById("sales").value) || 0;
-                const expenses = parseFloat(document.getElementById("expenses").value) || 0;
-                const total = cashBalance + sales - expenses;
-                document.getElementById("totalBalance").innerText = total;
-            } catch (error) {
-                showMessage('Ошибка расчета: ' + error.message, true);
-            }
-        }
-
-        function showMessage(message, isError = false) {
-            const messageElement = document.getElementById('statusMessage');
-            messageElement.textContent = message;
-            messageElement.className = 'message ' + (isError ? 'error' : 'success');
-            messageElement.style.display = 'block';
-            
-            if (!isError) {
-                setTimeout(() => {
-                    messageElement.style.display = 'none';
-                }, 3000);
-            }
-        }
+        // ... (остальной код остается без изменений) ...
 
         function saveToSheet() {
             try {
-                const totalBalance = document.getElementById("totalBalance").innerText;
-                if (selectedRow === 0 || totalBalance === "—") {
-                    showMessage("Выберите дату и рассчитайте итог!", true);
-                    return;
-                }
-
-                if (!selectedDate) {
-                    showMessage("Выберите дату!", true);
-                    return;
-                }
-
-                const currentMonth = getSheetNameForMonth(selectedDate);
-
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = GAS_URL;
-                form.target = 'hidden_iframe';
-
-                let iframe = document.getElementById('hidden_iframe');
-                if (!iframe) {
-                    iframe = document.createElement('iframe');
-                    iframe.name = 'hidden_iframe';
-                    iframe.id = 'hidden_iframe';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                }
-
-                const addField = (name, value) => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = name;
-                    input.value = value;
-                    form.appendChild(input);
-                };
+                // ... (начало функции остается без изменений) ...
 
                 addField('row', selectedRow);
                 addField('value', totalBalance);
                 addField('sales', document.getElementById("sales").value);
                 addField('expenses', document.getElementById("expenses").value);
                 addField('month', currentMonth);
-                addField('date', selectedDate.toISOString()); // Отправляем выбранную дату
+                addField('date', selectedDate.toISOString());
+                addField('timezone', 'UTC+5'); // Добавляем информацию о часовом поясе
 
-                showMessage("Сохранение данных...");
-
-                document.body.appendChild(form);
-                form.submit();
-
-                setTimeout(() => {
-                    document.body.removeChild(form);
-                    setTimeout(async () => {
-                        await loadPreviousDayData(selectedDate);
-                        showMessage("Данные успешно сохранены!");
-                        
-                        document.getElementById("sales").value = "0";
-                        document.getElementById("expenses").value = "0";
-                        document.getElementById("totalBalance").innerText = "—";
-                    }, 2000);
-                }, 100);
+                // ... (остальная часть функции остается без изменений) ...
             } catch (error) {
                 showMessage('Ошибка сохранения: ' + error.message, true);
             }
