@@ -2,74 +2,72 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тестовая страница Google Sheets API</title>
+    <title>Остаток кассы</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            text-align: center;
         }
-        .section {
-            background: white;
+        .balance-box {
+            background: #f8f9fa;
             border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        h2 {
-            color: #2c3e50;
-            margin-top: 0;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
+        #balance {
+            font-size: 48px;
+            color: #2ecc71;
+            margin: 20px 0;
+            font-weight: bold;
         }
         button {
-            margin: 8px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
             background: #3498db;
             color: white;
-            cursor: pointer;
-            font-weight: bold;
+            border: none;
             padding: 12px 25px;
-            transition: all 0.3s ease;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
         }
         button:hover {
             background: #2980b9;
-            transform: translateY(-1px);
         }
     </style>
-    <script>
-        const API_KEY = 'AIzaSyDk9XMOKbXaH_pFGUYv_D3NnnLbtnUcbEM'; // Вставьте ваш API Key
-        const SPREADSHEET_ID = '1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk'; // Вставьте ваш ID таблицы
-        const RANGE = 'Sheet1!L2'; // Диапазон данных для получения (измените на нужный столбец и строку)
+</head>
+<body>
+    <div class="balance-box">
+        <h2>Остаток наличных на <span id="currentDate"></span></h2>
+        <div id="balance">...</div>
+        <button onclick="loadBalance()">Обновить</button>
+        <p><small>Данные обновляются автоматически при загрузке страницы</small></p>
+    </div>
 
+    <script>
+        const SCRIPT_URL = 'ВАШ_URL_СКРИПТА';
+
+        // Загрузка данных
         async function loadBalance() {
             try {
-                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`);
+                const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
-                const value = data.values ? data.values[0][0] : 'Нет данных';
-                document.getElementById("balance").innerText = `Остаток: ${value}`;
-            } catch (err) {
-                console.error("Ошибка загрузки остатка:", err);
+                
+                if(data.status === "success") {
+                    document.getElementById("balance").textContent = `${data.balance} ₸`;
+                    document.getElementById("currentDate").textContent = data.date;
+                } else {
+                    document.getElementById("balance").textContent = "Ошибка загрузки";
+                }
+                
+            } catch (error) {
+                document.getElementById("balance").textContent = "Нет подключения";
             }
         }
 
-        document.addEventListener("DOMContentLoaded", function() {
-            loadBalance();
-        });
+        // Автообновление при загрузке
+        loadBalance();
     </script>
-</head>
-<body>
-    <h1>Тестовая страница Google Sheets API</h1>
-
-    <div class="section">
-        <h2>Остаток</h2>
-        <p id="balance">Остаток: Загрузка...</p>
-        <button onclick="loadBalance()">Обновить</button>
-    </div>
 </body>
 </html>
