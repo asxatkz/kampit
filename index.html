@@ -39,84 +39,180 @@
     
     <button onclick="saveToSheet()">Сохранить в таблицу</button>
     
-    <!-- Добавляем элемент для сообщений -->
     <div id="statusMessage" class="message"></div>
 
     <script>
-        // ... (предыдущий код без изменений до функции showMessage)
+        const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s";
+        const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
+        let selectedRow = 0;
 
-        // Функция для показа сообщения
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            showMessage('Ошибка: ' + msg, true);
+            return false;
+        };
+
+        window.onload = function() {
+            try {
+                const today = new Date();
+                document.getElementById("datePicker").valueAsDate = today;
+                handleDateSelection(today);
+            } catch (error) {
+                showMessage('Ошибка при загрузке: ' + error.message, true);
+            }
+        };
+
+        async function fetchData(month) {
+            try {
+                const sheetName = getSheetNameForMonth(month);
+                const RANGE = `${sheetName}!G1:G100`;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                return data.values || [];
+            } catch (error) {
+                showMessage('Ошибка получения данных: ' + error.message, true);
+                return [];
+            }
+        }
+
+        function getSheetNameForMonth(date) {
+            const months = [
+                'Январь', 'Февраль', 'Март', 'Апрель', 
+                'Май', 'Июнь', 'Июль', 'Август',
+                'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ];
+            return months[date.getMonth()];
+        }
+
+        async function loadPreviousDayData(currentDate) {
+            try {
+                const previousDay = new Date(currentDate);
+                previousDay.setDate(currentDate.getDate() - 1);
+                
+                const cashData = await fetchData(previousDay);
+                const prevDayRow = previousDay.getDate();
+                
+                if (cashData[prevDayRow - 1]) {
+                    document.getElementById("cashBalance").innerText = cashData[prevDayRow - 1][0];
+                } else {
+                    if (currentDate.getDate() === 1) {
+                        const lastMonthDate = new Date(currentDate);
+                        lastMonthDate.setDate(0);
+                        const lastMonthData = await fetchData(lastMonthDate);
+                        const lastDayOfMonth = lastMonthDate.getDate();
+                        
+                        if (lastMonthData[lastDayOfMonth - 1]) {
+                            document.getElementById("cashBalance").innerText = lastMonthData[lastDayOfMonth - 1][0];
+                        } else {
+                            document.getElementById("cashBalance").innerText = "0";
+                        }
+                    } else {
+                        document.getElementById("cashBalance").innerText = "0";
+                    }
+                }
+            } catch (error) {
+                showMessage('Ошибка загрузки данных: ' + error.message, true);
+            }
+        }
+
+        function handleDateSelection(date) {
+            selectedRow = date.getDate();
+            loadPreviousDayData(date);
+        }
+
+        document.getElementById("datePicker").addEventListener("change", function() {
+            const selectedDate = new Date(this.value);
+            handleDateSelection(selectedDate);
+        });
+
+        function calculateTotal() {
+            try {
+                const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
+                const sales = parseFloat(document.getElementById("sales").value) || 0;
+                const expenses = parseFloat(document.getElementById("expenses").value) || 0;
+                const total = cashBalance + sales - expenses;
+                document.getElementById("totalBalance").innerText = total;
+            } catch (error) {
+                showMessage('Ошибка расчета: ' + error.message, true);
+            }
+        }
+
         function showMessage(message, isError = false) {
             const messageElement = document.getElementById('statusMessage');
             messageElement.textContent = message;
             messageElement.className = 'message ' + (isError ? 'error' : 'success');
             messageElement.style.display = 'block';
             
-            // Автоматически скрываем сообщение через 3 секунды
-            setTimeout(() => {
-                messageElement.style.display = 'none';
-            }, 3000);
+            if (!isError) {
+                setTimeout(() => {
+                    messageElement.style.display = 'none';
+                }, 3000);
+            }
         }
 
         function saveToSheet() {
-            const totalBalance = document.getElementById("totalBalance").innerText;
-            if (selectedRow === 0 || totalBalance === "—") {
-                showMessage("Выберите дату и рассчитайте итог!", true);
-                return;
+            try {
+                const totalBalance = document.getElementById("totalBalance").innerText;
+                if (selectedRow === 0 || totalBalance === "—") {
+                    showMessage("Выберите дату и рассчитайте итог!", true);
+                    return;
+                }
+
+                const selectedDate = new Date(document.getElementById("datePicker").value);
+                const currentMonth = getSheetNameForMonth(selectedDate);
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = GAS_URL;
+                form.target = 'hidden_iframe';
+
+                let iframe = document.getElementById('hidden_iframe');
+                if (!iframe) {
+                    iframe = document.createElement('iframe');
+                    iframe.name = 'hidden_iframe';
+                    iframe.id = 'hidden_iframe';
+                    iframe.style.display = 'none';
+                    document.body.appendChild(iframe);
+                }
+
+                const addField = (name, value) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    form.appendChild(input);
+                };
+
+                addField('row', selectedRow);
+                addField('value', totalBalance);
+                addField('sales', document.getElementById("sales").value);
+                addField('expenses', document.getElementById("expenses").value);
+                addField('month', currentMonth);
+
+                showMessage("Сохранение данных...");
+
+                document.body.appendChild(form);
+                form.submit();
+
+                setTimeout(() => {
+                    document.body.removeChild(form);
+                    setTimeout(async () => {
+                        await loadPreviousDayData(selectedDate);
+                        showMessage("Данные успешно сохранены!");
+                        
+                        document.getElementById("sales").value = "0";
+                        document.getElementById("expenses").value = "0";
+                        document.getElementById("totalBalance").innerText = "—";
+                    }, 2000);
+                }, 100);
+            } catch (error) {
+                showMessage('Ошибка сохранения: ' + error.message, true);
             }
-
-            const selectedDate = new Date(document.getElementById("datePicker").value);
-            const currentMonth = getSheetNameForMonth(selectedDate);
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = GAS_URL;
-            form.target = 'hidden_iframe';
-
-            let iframe = document.getElementById('hidden_iframe');
-            if (!iframe) {
-                iframe = document.createElement('iframe');
-                iframe.name = 'hidden_iframe';
-                iframe.id = 'hidden_iframe';
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-            }
-
-            const addField = (name, value) => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                input.value = value;
-                form.appendChild(input);
-            };
-
-            addField('row', selectedRow);
-            addField('value', totalBalance);
-            addField('sales', document.getElementById("sales").value);
-            addField('expenses', document.getElementById("expenses").value);
-            addField('month', currentMonth);
-
-            // Показываем сообщение о процессе сохранения
-            showMessage("Сохранение данных...");
-
-            document.body.appendChild(form);
-            form.submit();
-
-            setTimeout(() => {
-                document.body.removeChild(form);
-                setTimeout(async () => {
-                    await loadPreviousDayData(selectedDate);
-                    showMessage("Данные успешно сохранены!");
-                    
-                    // Очищаем поля после успешного сохранения
-                    document.getElementById("sales").value = "0";
-                    document.getElementById("expenses").value = "0";
-                    document.getElementById("totalBalance").innerText = "—";
-                }, 2000);
-            }, 100);
         }
-
-        // ... (остальной код остается без изменений)
     </script>
 </body>
 </html>
