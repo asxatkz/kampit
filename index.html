@@ -37,7 +37,8 @@
             margin-bottom: 5px;
         }
 
-        input[type="number"] {
+        input[type="number"],
+        input[type="text"] {
             width: 150px;
             padding: 5px;
             border: 1px solid #ddd;
@@ -117,7 +118,7 @@
         <h2 class="section-title">Дата и остаток</h2>
         <div class="input-group">
             <label>Дата:</label>
-            <input type="date" id="datePicker" readonly>
+            <input type="date" id="datePicker">
         </div>
         <div class="input-group">
             <label>Остаток наличных:</label>
@@ -194,7 +195,7 @@
     </div>
 
     <div id="statusMessage" class="message"></div>
-
+    <span id="totalBalance" style="display: none;">—</span>
     <script>
         const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s";
         const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
@@ -244,7 +245,75 @@
             }
         };
 
-        // ... (оставляем существующие функции fetchData, getSheetNameForMonth, loadPreviousDayData, handleDateSelection без изменений)
+        function getSheetNameForMonth(date) {
+            const months = [
+                'Январь', 'Февраль', 'Март', 'Апрель', 
+                'Май', 'Июнь', 'Июль', 'Август',
+                'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ];
+            return months[date.getMonth()];
+        }
+
+        async function fetchData(month) {
+            try {
+                const sheetName = getSheetNameForMonth(month);
+                const RANGE = `${sheetName}!G1:G100`;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                return data.values || [];
+            } catch (error) {
+                showMessage('Ошибка получения данных: ' + error.message, true);
+                return [];
+            }
+        }
+
+        async function loadPreviousDayData(currentDate) {
+            try {
+                const previousDay = new Date(currentDate);
+                previousDay.setDate(currentDate.getDate() - 1);
+                
+                const cashData = await fetchData(previousDay);
+                const prevDayRow = previousDay.getDate();
+                
+                if (cashData[prevDayRow - 1]) {
+                    document.getElementById("cashBalance").innerText = cashData[prevDayRow - 1][0];
+                } else {
+                    if (currentDate.getDate() === 1) {
+                        const lastMonthDate = new Date(currentDate);
+                        lastMonthDate.setDate(0);
+                        const lastMonthData = await fetchData(lastMonthDate);
+                        const lastDayOfMonth = lastMonthDate.getDate();
+                        
+                        if (lastMonthData[lastDayOfMonth - 1]) {
+                            document.getElementById("cashBalance").innerText = lastMonthData[lastDayOfMonth - 1][0];
+                        } else {
+                            document.getElementById("cashBalance").innerText = "0";
+                        }
+                    } else {
+                        document.getElementById("cashBalance").innerText = "0";
+                    }
+                }
+            } catch (error) {
+                showMessage('Ошибка загрузки данных: ' + error.message, true);
+            }
+        }
+
+        function handleDateSelection(date) {
+            selectedRow = date.getDate();
+            selectedDate = date;
+            console.log('Selected date:', date);
+            loadPreviousDayData(date);
+        }
+
+        document.getElementById("datePicker").addEventListener("change", function() {
+            const selectedDate = new Date(this.value);
+            const localDate = getLocalDate(selectedDate);
+            handleDateSelection(localDate);
+        });
 
         function calculateTotal() {
             try {
@@ -263,10 +332,7 @@
                 // Зарплаты
                 const salaryAltynai = parseFloat(document.getElementById("salaryAltynai").value) || 0;
                 const salarySamal = parseFloat(document.getElementById("salarySamal").value) || 0;
-                
-                // Закупы
-                const cardPurchase = parseFloat(document.getElementById("cardPurchase").value) || 0;
-                
+
                 // Расчет выручки
                 const revenue = terminal + cash + transfer + cashPurchase - cashBalance;
                 document.getElementById("revenue").innerText = revenue;
@@ -276,13 +342,117 @@
                 const nextDayBalance = revenue - totalExpenses;
                 document.getElementById("nextDayBalance").innerText = nextDayBalance;
                 document.getElementById("totalBalance").innerText = nextDayBalance;
+
+                showMessage("Расчет выполнен", false);
             } catch (error) {
                 showMessage('Ошибка расчета: ' + error.message, true);
             }
         }
 
-        // ... (оставляем существующие функции showMessage и saveToSheet без изменений)
+        function showMessage(message, isError = false) {
+            const messageElement = document.getElementById('statusMessage');
+            messageElement.textContent = message;
+            messageElement.className = 'message ' + (isError ? 'error' : 'success');
+            messageElement.style.display = 'block';
+            
+            if (!isError) {
+                setTimeout(() => {
+                    messageElement.style.display = 'none';
+                }, 3000);
+            }
+        }
 
+        function saveToSheet() {
+            try {
+                const totalBalance = document.getElementById("totalBalance").innerText;
+                if (selectedRow === 0 || totalBalance === "—") {
+                    showMessage("Выберите дату и рассчитайте итог!", true);
+                    return;
+                }
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = GAS_URL;
+                form.target = 'hidden_iframe';
+
+                let iframe = document.getElementById('hidden_iframe');
+                if (!iframe) {
+                    iframe = document.createElement('iframe');
+                    iframe.name = 'hidden_iframe';
+                    iframe.id = 'hidden_iframe';
+                    iframe.style.display = 'none';
+                    document.body.appendChild(iframe);
+                }
+
+                const addField = (name, value) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    form.appendChild(input);
+                };
+
+                // Добавляем все поля формы
+                addField('row', selectedRow);
+                addField('value', totalBalance);
+                addField('date', selectedDate.toISOString());
+                addField('month', getSheetNameForMonth(selectedDate));
+                addField('terminal', document.getElementById("terminal").value);
+                addField('cash', document.getElementById("cash").value);
+                addField('transfer', document.getElementById("transfer").value);
+                addField('contractor', document.getElementById("contractor").value);
+                addField('cashPurchase', document.getElementById("cashPurchase").value);
+                addField('cardPurchase', document.getElementById("cardPurchase").value);
+                addField('retailPrice', document.getElementById("retailPrice").value);
+                addField('salaryAltynai', document.getElementById("salaryAltynai").value);
+                addField('salarySamal', document.getElementById("salarySamal").value);
+                addField('revenue', document.getElementById("revenue").innerText);
+
+                // Собираем дополнительные расходы
+                const additionalExpenses = [];
+                document.querySelectorAll('.expense-item').forEach(item => {
+                    const desc = item.querySelector('[id^="expenseDesc"]').value;
+                    const amount = item.querySelector('[id^="expenseAmount"]').value;
+                    if (desc && amount) {
+                        additionalExpenses.push(`${desc}: ${amount}`);
+                    }
+                });
+                addField('additionalExpenses', additionalExpenses.join('; '));
+
+                showMessage("Сохранение данных...");
+
+                document.body.appendChild(form);
+                form.submit();
+
+                setTimeout(() => {
+                    document.body.removeChild(form);
+                    setTimeout(async () => {
+                        await loadPreviousDayData(selectedDate);
+                        showMessage("Данные успешно сохранены!");
+                        
+                        // Очищаем поля после сохранения
+                        document.getElementById("terminal").value = "0";
+                        document.getElementById("cash").value = "0";
+                        document.getElementById("transfer").value = "0";
+                        document.getElementById("contractor").value = "";
+                        document.getElementById("cashPurchase").value = "0";
+                        document.getElementById("cardPurchase").value = "0";
+                        document.getElementById("retailPrice").value = "0";
+                        document.getElementById("salaryAltynai").value = "0";
+                        document.getElementById("salarySamal").value = "0";
+                        document.getElementById("revenue").innerText = "0";
+                        document.getElementById("nextDayBalance").innerText = "0";
+                        document.getElementById("totalBalance").innerText = "—";
+                        
+                        // Очищаем дополнительные расходы
+                        document.getElementById('additionalExpenses').innerHTML = '';
+                        expenseCounter = 0;
+                    }, 2000);
+                }, 100);
+            } catch (error) {
+                showMessage('Ошибка сохранения: ' + error.message, true);
+            }
+        }
     </script>
 </body>
 </html>
