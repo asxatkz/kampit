@@ -46,6 +46,79 @@
             transform: translateY(-1px);
         }
     </style>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+        const SPREADSHEET_ID = '1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk'; // Вставьте ID вашей Google Таблицы
+        const API_KEY = 'AIzaSyDk9XMOKbXaH_pFGUYv_D3NnnLbtnUcbEM'; // Вставьте ваш API Key
+
+        let gapiInited = false;
+
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                'apiKey': API_KEY,
+                'discoveryDocs': ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+            });
+            gapiInited = true;
+            loadBalanceMorning();
+        }
+
+        async function loadBalanceMorning() {
+            if (!gapiInited) return;
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Sheet1!L2', // Предположим, что остаток на утро хранится в ячейке L2
+                });
+                const value = response.result.values ? response.result.values[0][0] : 0;
+                document.getElementById("balanceMorning").value = value;
+            } catch (err) {
+                console.error("Ошибка загрузки остатка:", err);
+            }
+        }
+
+        async function sendData() {
+            if (!gapiInited) return;
+            try {
+                let data = [
+                    document.getElementById("date").value,
+                    parseFloat(document.getElementById("balanceMorning").value) || 0,
+                    parseFloat(document.getElementById("terminal").value) || 0,
+                    parseFloat(document.getElementById("cash").value) || 0,
+                    parseFloat(document.getElementById("transfers").value) || 0,
+                    parseFloat(document.getElementById("purchaseCash").value) || 0,
+                    parseFloat(document.getElementById("purchaseNonCash").value) || 0,
+                    parseFloat(document.getElementById("salaryAltynai").value) || 0,
+                    parseFloat(document.getElementById("salarySamal").value) || 0,
+                    parseFloat(document.getElementById("otherExpenses").value) || 0,
+                    parseFloat(document.getElementById("revenue").value) || 0,
+                    parseFloat(document.getElementById("balanceTomorrow").value) || 0,
+                ];
+
+                await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Sheet1!A:L',
+                    valueInputOption: 'RAW',
+                    resource: {
+                        values: [data],
+                    },
+                });
+
+                alert("✅ Данные успешно сохранены!");
+            } catch (err) {
+                console.error("Ошибка отправки данных:", err);
+                alert("❌ Ошибка сохранения данных!");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("date").value = new Date().toISOString().split("T")[0];
+            gapiLoaded();
+        });
+    </script>
 </head>
 <body>
     <h1>📊 Учет магазина</h1>
@@ -90,61 +163,5 @@
     </div>
 
     <button onclick="sendData()">💾 Сохранить отчет</button>
-
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec"; // Вставьте URL вашего Google Apps Script
-
-        document.addEventListener("DOMContentLoaded", async function() {
-            document.getElementById("date").value = new Date().toISOString().split("T")[0];
-
-            // Загружаем остаток на утро из Google Таблицы
-            try {
-                let response = await fetch(SCRIPT_URL + "?mode=getBalance", {
-                    method: "GET",
-                    headers: { "Content-Type": "application/json" }
-                });
-                let data = await response.json();
-                document.getElementById("balanceMorning").value = data.balance || 0;
-            } catch (error) {
-                console.error("Ошибка загрузки остатка:", error);
-            }
-        });
-
-        async function sendData() {
-            try {
-                let data = {
-                    date: document.getElementById("date").value,
-                    balanceMorning: parseFloat(document.getElementById("balanceMorning").value) || 0,
-                    terminal: parseFloat(document.getElementById("terminal").value) || 0,
-                    cash: parseFloat(document.getElementById("cash").value) || 0,
-                    transfers: parseFloat(document.getElementById("transfers").value) || 0,
-                    purchaseCash: parseFloat(document.getElementById("purchaseCash").value) || 0,
-                    purchaseNonCash: parseFloat(document.getElementById("purchaseNonCash").value) || 0,
-                    salaryAltynai: parseFloat(document.getElementById("salaryAltynai").value) || 0,
-                    salarySamal: parseFloat(document.getElementById("salarySamal").value) || 0,
-                    otherExpenses: parseFloat(document.getElementById("otherExpenses").value) || 0,
-                    revenue: parseFloat(document.getElementById("revenue").value) || 0,
-                    balanceTomorrow: parseFloat(document.getElementById("balanceTomorrow").value) || 0
-                };
-
-                let response = await fetch(SCRIPT_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
-                });
-
-                let result = await response.json();
-
-                if (result.status === "success") {
-                    alert("✅ Данные успешно сохранены!");
-                } else {
-                    alert("❌ Ошибка сохранения данных!");
-                }
-            } catch (error) {
-                console.error("Ошибка отправки данных:", error);
-                alert("❌ Ошибка сети при отправке данных!");
-            }
-        }
-    </script>
 </body>
 </html>
