@@ -21,23 +21,21 @@
     <button onclick="saveToSheet()">Сохранить в таблицу</button>
 
     <script>
-        const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s"; 
-        const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk"; 
-        const RANGE = "H2:H100"; // Остаток
-        let selectedRow = 0; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";  
+        let selectedRow = 0;
 
         async function fetchData() {
-            const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`);
+            const response = await fetch(SCRIPT_URL);
             const data = await response.json();
-            return data.values || [];
+            return data || [];
         }
 
         document.getElementById("datePicker").addEventListener("change", async function() {
             const selectedDate = new Date(this.value);
             const day = selectedDate.getDate();
-            selectedRow = day; // Запоминаем строку для сохранения
-            const cashData = await fetchData();
+            selectedRow = day; 
             
+            const cashData = await fetchData();
             if (cashData[day - 2]) {
                 document.getElementById("cashBalance").innerText = cashData[day - 2][0];
             } else {
@@ -60,13 +58,10 @@
                 return;
             }
 
-            const range = `G${selectedRow + 1}`; // Записываем в колонку G (G2, G3 и т. д.)
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED&key=${API_KEY}`;
-
-            const response = await fetch(url, {
-                method: "PUT",
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ values: [[totalBalance]] })
+                body: JSON.stringify({ row: selectedRow + 1, value: totalBalance })
             });
 
             if (response.ok) {
