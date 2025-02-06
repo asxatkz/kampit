@@ -46,15 +46,18 @@
         const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
         let selectedRow = 0;
+        let selectedDate = null;
 
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            showMessage('Ошибка: ' + msg, true);
-            return false;
-        };
+        // Функция для получения локальной даты с учетом часового пояса
+        function getLocalDate(date = new Date()) {
+            const offset = 5; // UTC+5
+            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+            return new Date(utc + (3600000 * offset));
+        }
 
         window.onload = function() {
             try {
-                const today = new Date();
+                const today = getLocalDate();
                 document.getElementById("datePicker").valueAsDate = today;
                 handleDateSelection(today);
             } catch (error) {
@@ -121,12 +124,13 @@
 
         function handleDateSelection(date) {
             selectedRow = date.getDate();
+            selectedDate = date; // Сохраняем выбранную дату
             loadPreviousDayData(date);
         }
 
         document.getElementById("datePicker").addEventListener("change", function() {
-            const selectedDate = new Date(this.value);
-            handleDateSelection(selectedDate);
+            const date = new Date(this.value);
+            handleDateSelection(date);
         });
 
         function calculateTotal() {
@@ -162,7 +166,11 @@
                     return;
                 }
 
-                const selectedDate = new Date(document.getElementById("datePicker").value);
+                if (!selectedDate) {
+                    showMessage("Выберите дату!", true);
+                    return;
+                }
+
                 const currentMonth = getSheetNameForMonth(selectedDate);
 
                 const form = document.createElement('form');
@@ -192,6 +200,7 @@
                 addField('sales', document.getElementById("sales").value);
                 addField('expenses', document.getElementById("expenses").value);
                 addField('month', currentMonth);
+                addField('date', selectedDate.toISOString()); // Отправляем выбранную дату
 
                 showMessage("Сохранение данных...");
 
