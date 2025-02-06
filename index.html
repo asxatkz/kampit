@@ -66,20 +66,21 @@
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('row', selectedRow + 1);
-            formData.append('value', totalBalance);
-
             try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Добавляем этот параметр
-                    body: formData
-                });
-
-                // Так как мы используем no-cors, мы не можем прочитать ответ
-                // Просто показываем сообщение об успехе
-                alert("Данные отправлены!");
+                // Создаем URL с параметрами
+                const urlWithParams = `${GAS_URL}?row=${selectedRow + 1}&value=${totalBalance}`;
+                
+                // Отправляем GET запрос вместо POST
+                const response = await fetch(urlWithParams);
+                
+                // Показываем сообщение об успехе
+                alert("Данные успешно сохранены!");
+                
+                // Обновляем отображаемые данные
+                const cashData = await fetchData();
+                if (cashData[selectedRow - 2]) {
+                    document.getElementById("cashBalance").innerText = cashData[selectedRow - 2][0];
+                }
             } catch (error) {
                 console.error("Ошибка сохранения:", error);
                 alert("Ошибка записи в таблицу!");
