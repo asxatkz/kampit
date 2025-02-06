@@ -35,7 +35,7 @@
         };
 
         async function fetchData() {
-            const RANGE = "G2:G100"; // Изменен диапазон на столбец G (итоговые суммы)
+            const RANGE = "G1:G100"; // Изменено с G2 на G1
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
             const response = await fetch(url);
             const data = await response.json();
@@ -49,10 +49,10 @@
             const prevDayRow = previousDay.getDate();
             
             const cashData = await fetchData();
-            if (cashData[prevDayRow - 2]) {
-                document.getElementById("cashBalance").innerText = cashData[prevDayRow - 2][0];
+            if (cashData[prevDayRow - 1]) { // Изменено с prevDayRow - 2 на prevDayRow - 1
+                document.getElementById("cashBalance").innerText = cashData[prevDayRow - 1][0];
             } else {
-                document.getElementById("cashBalance").innerText = "0"; // Если нет данных, показываем 0
+                document.getElementById("cashBalance").innerText = "0";
             }
         }
 
@@ -82,7 +82,17 @@
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = GAS_URL;
-            form.target = '_blank';
+            form.target = 'hidden_iframe'; // Изменено с _blank на hidden_iframe
+
+            // Создаем скрытый iframe
+            let iframe = document.getElementById('hidden_iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.name = 'hidden_iframe';
+                iframe.id = 'hidden_iframe';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+            }
 
             // Добавляем поля формы
             const addField = (name, value) => {
@@ -93,7 +103,7 @@
                 form.appendChild(input);
             };
 
-            addField('row', selectedRow + 1);
+            addField('row', selectedRow); // Убрано +1
             addField('value', totalBalance);
             addField('sales', document.getElementById("sales").value);
             addField('expenses', document.getElementById("expenses").value);
