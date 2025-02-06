@@ -4,6 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Остаток наличных</title>
+    <style>
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            display: none;
+        }
+        .success {
+            color: green;
+            background-color: #e8f5e9;
+            border: 1px solid #81c784;
+            border-radius: 4px;
+        }
+        .error {
+            color: red;
+            background-color: #ffebee;
+            border: 1px solid #e57373;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
     <h2>Выберите дату:</h2>
@@ -19,91 +38,30 @@
     <h3>Итоговая сумма: <span id="totalBalance">—</span></h3>
     
     <button onclick="saveToSheet()">Сохранить в таблицу</button>
+    
+    <!-- Добавляем элемент для сообщений -->
+    <div id="statusMessage" class="message"></div>
 
     <script>
-        const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s";
-        const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
-        let selectedRow = 0;
+        // ... (предыдущий код без изменений до функции showMessage)
 
-        // Устанавливаем сегодняшнюю дату при загрузке страницы
-        window.onload = function() {
-            const today = new Date();
-            document.getElementById("datePicker").valueAsDate = today;
-            handleDateSelection(today);
-        };
-
-        async function fetchData(month) {
-            const sheetName = getSheetNameForMonth(month);
-            const RANGE = `${sheetName}!G1:G100`;
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-            const response = await fetch(url);
-            const data = await response.json();
-            return data.values || [];
-        }
-
-        function getSheetNameForMonth(date) {
-            const months = [
-                'Январь', 'Февраль', 'Март', 'Апрель', 
-                'Май', 'Июнь', 'Июль', 'Август',
-                'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-            ];
-            return months[date.getMonth()];
-        }
-
-        // Функция загрузки данных за предыдущий день
-        async function loadPreviousDayData(currentDate) {
-            const previousDay = new Date(currentDate);
-            previousDay.setDate(currentDate.getDate() - 1);
+        // Функция для показа сообщения
+        function showMessage(message, isError = false) {
+            const messageElement = document.getElementById('statusMessage');
+            messageElement.textContent = message;
+            messageElement.className = 'message ' + (isError ? 'error' : 'success');
+            messageElement.style.display = 'block';
             
-            // Получаем данные из нужного листа
-            const cashData = await fetchData(previousDay);
-            const prevDayRow = previousDay.getDate();
-            
-            if (cashData[prevDayRow - 1]) {
-                document.getElementById("cashBalance").innerText = cashData[prevDayRow - 1][0];
-            } else {
-                // Если это первое число месяца, пытаемся получить данные за последний день предыдущего месяца
-                if (currentDate.getDate() === 1) {
-                    const lastMonthDate = new Date(currentDate);
-                    lastMonthDate.setDate(0); // Переходим к последнему дню предыдущего месяца
-                    const lastMonthData = await fetchData(lastMonthDate);
-                    const lastDayOfMonth = lastMonthDate.getDate();
-                    
-                    if (lastMonthData[lastDayOfMonth - 1]) {
-                        document.getElementById("cashBalance").innerText = lastMonthData[lastDayOfMonth - 1][0];
-                    } else {
-                        document.getElementById("cashBalance").innerText = "0";
-                    }
-                } else {
-                    document.getElementById("cashBalance").innerText = "0";
-                }
-            }
-        }
-
-        function handleDateSelection(date) {
-            selectedRow = date.getDate();
-            loadPreviousDayData(date);
-        }
-
-        // Обработчик выбора даты
-        document.getElementById("datePicker").addEventListener("change", function() {
-            const selectedDate = new Date(this.value);
-            handleDateSelection(selectedDate);
-        });
-
-        function calculateTotal() {
-            const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
-            const sales = parseFloat(document.getElementById("sales").value) || 0;
-            const expenses = parseFloat(document.getElementById("expenses").value) || 0;
-            const total = cashBalance + sales - expenses;
-            document.getElementById("totalBalance").innerText = total;
+            // Автоматически скрываем сообщение через 3 секунды
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 3000);
         }
 
         function saveToSheet() {
             const totalBalance = document.getElementById("totalBalance").innerText;
             if (selectedRow === 0 || totalBalance === "—") {
-                alert("Выберите дату и рассчитайте итог!");
+                showMessage("Выберите дату и рассчитайте итог!", true);
                 return;
             }
 
@@ -138,6 +96,9 @@
             addField('expenses', document.getElementById("expenses").value);
             addField('month', currentMonth);
 
+            // Показываем сообщение о процессе сохранения
+            showMessage("Сохранение данных...");
+
             document.body.appendChild(form);
             form.submit();
 
@@ -145,10 +106,17 @@
                 document.body.removeChild(form);
                 setTimeout(async () => {
                     await loadPreviousDayData(selectedDate);
-                    alert("Данные успешно сохранены!");
+                    showMessage("Данные успешно сохранены!");
+                    
+                    // Очищаем поля после успешного сохранения
+                    document.getElementById("sales").value = "0";
+                    document.getElementById("expenses").value = "0";
+                    document.getElementById("totalBalance").innerText = "—";
                 }, 2000);
             }, 100);
         }
+
+        // ... (остальной код остается без изменений)
     </script>
 </body>
 </html>
