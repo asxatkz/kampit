@@ -21,9 +21,9 @@
     <button onclick="saveToSheet()">Сохранить в таблицу</button>
 
     <script>
-        const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s"; 
-        const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk"; 
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";  
+        const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s";
+        const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
         let selectedRow = 0;
 
         // Функция для получения данных через Google Sheets API
@@ -39,7 +39,7 @@
         document.getElementById("datePicker").addEventListener("change", async function() {
             const selectedDate = new Date(this.value);
             const day = selectedDate.getDate();
-            selectedRow = day;  
+            selectedRow = day;
             
             const cashData = await fetchData();
             if (cashData[day - 2]) {
@@ -58,7 +58,7 @@
             document.getElementById("totalBalance").innerText = total;
         }
 
-        // Запись итоговой суммы в таблицу через Google Apps Script (GAS)
+        // Запись итоговой суммы в таблицу через Google Apps Script
         async function saveToSheet() {
             const totalBalance = document.getElementById("totalBalance").innerText;
             if (selectedRow === 0 || totalBalance === "—") {
@@ -66,15 +66,20 @@
                 return;
             }
 
+            const formData = new FormData();
+            formData.append('row', selectedRow + 1);
+            formData.append('value', totalBalance);
+
             try {
                 const response = await fetch(GAS_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ row: selectedRow + 1, value: totalBalance })
+                    method: 'POST',
+                    mode: 'no-cors', // Добавляем этот параметр
+                    body: formData
                 });
 
-                const result = await response.text();
-                alert("Ответ сервера: " + result);
+                // Так как мы используем no-cors, мы не можем прочитать ответ
+                // Просто показываем сообщение об успехе
+                alert("Данные отправлены!");
             } catch (error) {
                 console.error("Ошибка сохранения:", error);
                 alert("Ошибка записи в таблицу!");
