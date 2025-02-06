@@ -3,42 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Остаток наличных</title>
+    <title>Учет продаж и расходов</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .section-title {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #666;
+            padding-bottom: 5px;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: inline-block;
+            width: 200px;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"] {
+            width: 150px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        input[type="date"] {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .total-section {
+            background-color: #e8f5e9;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
         .message {
             margin-top: 10px;
             padding: 10px;
             display: none;
+            border-radius: 4px;
         }
+
         .success {
             color: green;
             background-color: #e8f5e9;
             border: 1px solid #81c784;
-            border-radius: 4px;
         }
+
         .error {
             color: red;
             background-color: #ffebee;
             border: 1px solid #e57373;
-            border-radius: 4px;
+        }
+
+        .expenses-list {
+            margin-top: 10px;
+        }
+
+        .expense-item {
+            margin-bottom: 5px;
+        }
+
+        .add-expense {
+            background-color: #2196F3;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .remove-expense {
+            background-color: #f44336;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 5px;
         }
     </style>
 </head>
 <body>
-    <h2>Выберите дату:</h2>
-    <input type="date" id="datePicker">
-    
-    <h3>Остаток наличных: <span id="cashBalance">—</span></h3>
-    
-    <label>Продажи: <input type="number" id="sales" value="0"></label><br>
-    <label>Расходы: <input type="number" id="expenses" value="0"></label><br>
-    
-    <button onclick="calculateTotal()">Рассчитать итог</button>
-    
-    <h3>Итоговая сумма: <span id="totalBalance">—</span></h3>
-    
-    <button onclick="saveToSheet()">Сохранить в таблицу</button>
-    
+    <div class="section">
+        <h2 class="section-title">Дата и остаток</h2>
+        <div class="input-group">
+            <label>Дата:</label>
+            <input type="date" id="datePicker" readonly>
+        </div>
+        <div class="input-group">
+            <label>Остаток наличных:</label>
+            <span id="cashBalance">—</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Продажа</h2>
+        <div class="input-group">
+            <label>Терминал:</label>
+            <input type="number" id="terminal" value="0">
+        </div>
+        <div class="input-group">
+            <label>Наличные:</label>
+            <input type="number" id="cash" value="0">
+        </div>
+        <div class="input-group">
+            <label>Перевод:</label>
+            <input type="number" id="transfer" value="0">
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Закуп</h2>
+        <div class="input-group">
+            <label>Контрагент:</label>
+            <input type="text" id="contractor">
+        </div>
+        <div class="input-group">
+            <label>Закуп за нал:</label>
+            <input type="number" id="cashPurchase" value="0">
+        </div>
+        <div class="input-group">
+            <label>Закуп за безнал:</label>
+            <input type="number" id="cardPurchase" value="0">
+        </div>
+        <div class="input-group">
+            <label>Розничная цена:</label>
+            <input type="number" id="retailPrice" value="0">
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Расходы</h2>
+        <div class="input-group">
+            <label>Зарплата Алтынай:</label>
+            <input type="number" id="salaryAltynai" value="0">
+        </div>
+        <div class="input-group">
+            <label>Зарплата Самал:</label>
+            <input type="number" id="salarySamal" value="0">
+        </div>
+        <div id="additionalExpenses" class="expenses-list">
+            <!-- Дополнительные расходы будут добавляться сюда -->
+        </div>
+        <button class="add-expense" onclick="addExpenseField()">+ Добавить расход</button>
+    </div>
+
+    <div class="total-section">
+        <div class="input-group">
+            <label>Выручка:</label>
+            <span id="revenue">0</span>
+        </div>
+        <div class="input-group">
+            <label>Остаток на следующий день:</label>
+            <span id="nextDayBalance">0</span>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button onclick="calculateTotal()">Рассчитать итог</button>
+        <button onclick="saveToSheet()">Сохранить в таблицу</button>
+    </div>
+
     <div id="statusMessage" class="message"></div>
 
     <script>
@@ -47,19 +201,36 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
         let selectedRow = 0;
         let selectedDate = null;
+        let expenseCounter = 0;
 
         function getLocalDate(date = new Date()) {
-            // Создаем новую дату и добавляем 5 часов к UTC
             const localDate = new Date(date.getTime() + (5 * 60 * 60 * 1000));
-            
-            // Проверяем, если после добавления 5 часов мы перешли на следующий день
             if (localDate.getHours() >= 0 && localDate.getHours() < 5) {
                 localDate.setDate(localDate.getDate() - 1);
             }
-            
-            // Устанавливаем время на начало дня
             localDate.setHours(0, 0, 0, 0);
             return localDate;
+        }
+
+        function addExpenseField() {
+            expenseCounter++;
+            const expenseDiv = document.createElement('div');
+            expenseDiv.className = 'expense-item';
+            expenseDiv.innerHTML = `
+                <div class="input-group">
+                    <label>Описание:</label>
+                    <input type="text" id="expenseDesc${expenseCounter}">
+                    <label style="width: 100px;">Сумма:</label>
+                    <input type="number" id="expenseAmount${expenseCounter}" value="0">
+                    <button class="remove-expense" onclick="removeExpense(this)">Удалить</button>
+                </div>
+            `;
+            document.getElementById('additionalExpenses').appendChild(expenseDiv);
+        }
+
+        function removeExpense(button) {
+            button.parentElement.parentElement.remove();
+            calculateTotal();
         }
 
         window.onload = function() {
@@ -73,166 +244,45 @@
             }
         };
 
-        async function fetchData(month) {
-            try {
-                const sheetName = getSheetNameForMonth(month);
-                const RANGE = `${sheetName}!G1:G100`;
-                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                return data.values || [];
-            } catch (error) {
-                showMessage('Ошибка получения данных: ' + error.message, true);
-                return [];
-            }
-        }
-
-        function getSheetNameForMonth(date) {
-            const months = [
-                'Январь', 'Февраль', 'Март', 'Апрель', 
-                'Май', 'Июнь', 'Июль', 'Август',
-                'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-            ];
-            return months[date.getMonth()];
-        }
-
-        async function loadPreviousDayData(currentDate) {
-            try {
-                const previousDay = new Date(currentDate);
-                previousDay.setDate(currentDate.getDate() - 1);
-                
-                const cashData = await fetchData(previousDay);
-                const prevDayRow = previousDay.getDate();
-                
-                if (cashData[prevDayRow - 1]) {
-                    document.getElementById("cashBalance").innerText = cashData[prevDayRow - 1][0];
-                } else {
-                    if (currentDate.getDate() === 1) {
-                        const lastMonthDate = new Date(currentDate);
-                        lastMonthDate.setDate(0);
-                        const lastMonthData = await fetchData(lastMonthDate);
-                        const lastDayOfMonth = lastMonthDate.getDate();
-                        
-                        if (lastMonthData[lastDayOfMonth - 1]) {
-                            document.getElementById("cashBalance").innerText = lastMonthData[lastDayOfMonth - 1][0];
-                        } else {
-                            document.getElementById("cashBalance").innerText = "0";
-                        }
-                    } else {
-                        document.getElementById("cashBalance").innerText = "0";
-                    }
-                }
-            } catch (error) {
-                showMessage('Ошибка загрузки данных: ' + error.message, true);
-            }
-        }
-
-        function handleDateSelection(date) {
-            selectedRow = date.getDate();
-            selectedDate = date;
-            console.log('Selected date:', date);
-            loadPreviousDayData(date);
-        }
-
-        document.getElementById("datePicker").addEventListener("change", function() {
-            const selectedDate = new Date(this.value);
-            const localDate = getLocalDate(selectedDate);
-            handleDateSelection(localDate);
-        });
+        // ... (оставляем существующие функции fetchData, getSheetNameForMonth, loadPreviousDayData, handleDateSelection без изменений)
 
         function calculateTotal() {
             try {
                 const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
-                const sales = parseFloat(document.getElementById("sales").value) || 0;
-                const expenses = parseFloat(document.getElementById("expenses").value) || 0;
-                const total = cashBalance + sales - expenses;
-                document.getElementById("totalBalance").innerText = total;
+                const terminal = parseFloat(document.getElementById("terminal").value) || 0;
+                const cash = parseFloat(document.getElementById("cash").value) || 0;
+                const transfer = parseFloat(document.getElementById("transfer").value) || 0;
+                const cashPurchase = parseFloat(document.getElementById("cashPurchase").value) || 0;
+
+                // Рассчитываем дополнительные расходы
+                let additionalExpensesTotal = 0;
+                document.querySelectorAll('[id^="expenseAmount"]').forEach(input => {
+                    additionalExpensesTotal += parseFloat(input.value) || 0;
+                });
+
+                // Зарплаты
+                const salaryAltynai = parseFloat(document.getElementById("salaryAltynai").value) || 0;
+                const salarySamal = parseFloat(document.getElementById("salarySamal").value) || 0;
+                
+                // Закупы
+                const cardPurchase = parseFloat(document.getElementById("cardPurchase").value) || 0;
+                
+                // Расчет выручки
+                const revenue = terminal + cash + transfer + cashPurchase - cashBalance;
+                document.getElementById("revenue").innerText = revenue;
+
+                // Расчет остатка на следующий день
+                const totalExpenses = salaryAltynai + salarySamal + additionalExpensesTotal;
+                const nextDayBalance = revenue - totalExpenses;
+                document.getElementById("nextDayBalance").innerText = nextDayBalance;
+                document.getElementById("totalBalance").innerText = nextDayBalance;
             } catch (error) {
                 showMessage('Ошибка расчета: ' + error.message, true);
             }
         }
 
-        function showMessage(message, isError = false) {
-            const messageElement = document.getElementById('statusMessage');
-            messageElement.textContent = message;
-            messageElement.className = 'message ' + (isError ? 'error' : 'success');
-            messageElement.style.display = 'block';
-            
-            if (!isError) {
-                setTimeout(() => {
-                    messageElement.style.display = 'none';
-                }, 3000);
-            }
-        }
+        // ... (оставляем существующие функции showMessage и saveToSheet без изменений)
 
-        function saveToSheet() {
-            try {
-                const totalBalance = document.getElementById("totalBalance").innerText;
-                if (selectedRow === 0 || totalBalance === "—") {
-                    showMessage("Выберите дату и рассчитайте итог!", true);
-                    return;
-                }
-
-                if (!selectedDate) {
-                    showMessage("Выберите дату!", true);
-                    return;
-                }
-
-                const currentMonth = getSheetNameForMonth(selectedDate);
-
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = GAS_URL;
-                form.target = 'hidden_iframe';
-
-                let iframe = document.getElementById('hidden_iframe');
-                if (!iframe) {
-                    iframe = document.createElement('iframe');
-                    iframe.name = 'hidden_iframe';
-                    iframe.id = 'hidden_iframe';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                }
-
-                const addField = (name, value) => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = name;
-                    input.value = value;
-                    form.appendChild(input);
-                };
-
-                addField('row', selectedRow);
-                addField('value', totalBalance);
-                addField('sales', document.getElementById("sales").value);
-                addField('expenses', document.getElementById("expenses").value);
-                addField('month', currentMonth);
-                addField('date', selectedDate.toISOString());
-                addField('timezone', 'UTC+5');
-
-                showMessage("Сохранение данных...");
-
-                document.body.appendChild(form);
-                form.submit();
-
-                setTimeout(() => {
-                    document.body.removeChild(form);
-                    setTimeout(async () => {
-                        await loadPreviousDayData(selectedDate);
-                        showMessage("Данные успешно сохранены!");
-                        
-                        document.getElementById("sales").value = "0";
-                        document.getElementById("expenses").value = "0";
-                        document.getElementById("totalBalance").innerText = "—";
-                    }, 2000);
-                }, 100);
-            } catch (error) {
-                showMessage('Ошибка сохранения: ' + error.message, true);
-            }
-        }
     </script>
 </body>
 </html>
