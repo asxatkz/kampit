@@ -149,8 +149,13 @@
             }
         }
 
+        function setDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById("date").value = today;
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
-            document.getElementById("date").value = new Date().toISOString().split("T")[0];
+            setDate();
             gapiLoaded();
             gisLoaded();
         });
