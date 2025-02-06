@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет магазина</title>
+    <title>Тестовая страница Google Sheets API</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -25,185 +25,51 @@
             border-bottom: 2px solid #3498db;
             padding-bottom: 10px;
         }
-        input, button {
+        button {
             margin: 8px;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            width: 250px;
-            transition: all 0.3s ease;
-        }
-        button {
             background: #3498db;
             color: white;
-            border: none;
             cursor: pointer;
             font-weight: bold;
             padding: 12px 25px;
+            transition: all 0.3s ease;
         }
         button:hover {
             background: #2980b9;
             transform: translateY(-1px);
         }
     </style>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-        const CLIENT_ID = '182123418974-9e7qbmj17i0qi9gj44ctedr41d5a34fm.apps.googleusercontent.com'; // Вставьте ваш OAuth Client ID
         const API_KEY = 'AIzaSyDk9XMOKbXaH_pFGUYv_D3NnnLbtnUcbEM'; // Вставьте ваш API Key
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+        const SPREADSHEET_ID = '1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk'; // Вставьте ваш ID таблицы
+        const RANGE = 'Sheet1!L2'; // Диапазон данных для получения (измените на нужный столбец и строку)
 
-        let tokenClient;
-        let gapiInited = false;
-        let gisInited = false;
-
-        function gapiLoaded() {
-            gapi.load('client', initializeGapiClient);
-        }
-
-        async function initializeGapiClient() {
-            await gapi.client.init({
-                apiKey: API_KEY,
-                discoveryDocs: DISCOVERY_DOCS,
-            });
-            gapiInited = true;
-            maybeEnableButtons();
-        }
-
-        function gisLoaded() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: SCOPES,
-                callback: '', // defined later
-            });
-            gisInited = true;
-            maybeEnableButtons();
-        }
-
-        function maybeEnableButtons() {
-            if (gapiInited && gisInited) {
-                document.getElementById("authorize_button").style.display = 'block';
-            }
-        }
-
-        function handleAuthClick() {
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) {
-                    throw (resp);
-                }
-                document.getElementById("authorize_button").innerText = 'Refresh';
-                await loadBalanceMorning();
-            };
-
-            if (gapi.client.getToken() === null) {
-                tokenClient.requestAccessToken({prompt: 'consent'});
-            } else {
-                tokenClient.requestAccessToken({prompt: ''});
-            }
-        }
-
-        async function loadBalanceMorning() {
+        async function loadBalance() {
             try {
-                const response = await gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: '1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk',
-                    range: 'Sheet1!L2',
-                });
-                const value = response.result.values ? response.result.values[0][0] : 0;
-                document.getElementById("balanceMorning").value = value;
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`);
+                const data = await response.json();
+                const value = data.values ? data.values[0][0] : 'Нет данных';
+                document.getElementById("balance").innerText = `Остаток: ${value}`;
             } catch (err) {
                 console.error("Ошибка загрузки остатка:", err);
             }
         }
 
-        async function sendData() {
-            try {
-                let data = [
-                    document.getElementById("date").value,
-                    parseFloat(document.getElementById("balanceMorning").value) || 0,
-                    parseFloat(document.getElementById("terminal").value) || 0,
-                    parseFloat(document.getElementById("cash").value) || 0,
-                    parseFloat(document.getElementById("transfers").value) || 0,
-                    parseFloat(document.getElementById("purchaseCash").value) || 0,
-                    parseFloat(document.getElementById("purchaseNonCash").value) || 0,
-                    parseFloat(document.getElementById("salaryAltynai").value) || 0,
-                    parseFloat(document.getElementById("salarySamal").value) || 0,
-                    parseFloat(document.getElementById("otherExpenses").value) || 0,
-                    parseFloat(document.getElementById("revenue").value) || 0,
-                    parseFloat(document.getElementById("balanceTomorrow").value) || 0,
-                ];
-
-                await gapi.client.sheets.spreadsheets.values.append({
-                    spreadsheetId: '1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk',
-                    range: 'Sheet1!A:L',
-                    valueInputOption: 'RAW',
-                    resource: {
-                        values: [data],
-                    },
-                });
-
-                alert("✅ Данные успешно сохранены!");
-            } catch (err) {
-                console.error("Ошибка отправки данных:", err);
-                alert("❌ Ошибка сохранения данных!");
-            }
-        }
-
-        function setDate() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById("date").value = today;
-        }
-
         document.addEventListener("DOMContentLoaded", function() {
-            setDate();
-            gapiLoaded();
-            gisLoaded();
+            loadBalance();
         });
     </script>
 </head>
 <body>
-    <h1>📊 Учет магазина</h1>
+    <h1>Тестовая страница Google Sheets API</h1>
 
-    <!-- Дата и Остаток -->
     <div class="section">
-        <h2>📅 Дата и Остаток</h2>
-        <label>📅 Дата: <input type="date" id="date" readonly></label>
-        <label>💰 Остаток на утро: <input type="number" id="balanceMorning" readonly></label>
+        <h2>Остаток</h2>
+        <p id="balance">Остаток: Загрузка...</p>
+        <button onclick="loadBalance()">Обновить</button>
     </div>
-
-    <!-- Продажи -->
-    <div class="section">
-        <h2>💵 Продажи</h2>
-        <label>💳 Терминал: <input type="number" id="terminal"></label>
-        <label>💵 Наличные: <input type="number" id="cash"></label>
-        <label>📲 Переводы: <input type="number" id="transfers"></label>
-    </div>
-
-    <!-- Закупки -->
-    <div class="section">
-        <h2>📦 Закупки</h2>
-        <label>🏢 Контрагент: <input type="text" id="supplier"></label>
-        <label>💰 Закуп за нал: <input type="number" id="purchaseCash"></label>
-        <label>💳 Закуп за безнал: <input type="number" id="purchaseNonCash"></label>
-        <label>🏷️ Розничная цена: <input type="number" id="retailPrice"></label>
-    </div>
-
-    <!-- Расходы -->
-    <div class="section">
-        <h2>👥 Расходы</h2>
-        <label>👩‍💼 Зарплата Алтынай: <input type="number" id="salaryAltynai"></label>
-        <label>👩‍💻 Зарплата Самал: <input type="number" id="salarySamal"></label>
-        <label>💸 Прочие расходы: <input type="number" id="otherExpenses"></label>
-    </div>
-
-    <!-- Итог -->
-    <div class="section">
-        <h2>📊 Итог</h2>
-        <label>💰 Выручка: <input type="number" id="revenue" readonly></label>
-        <label>💰 Остаток на завтра: <input type="number" id="balanceTomorrow" readonly></label>
-    </div>
-
-    <button id="authorize_button" style="display: none;" onclick="handleAuthClick()">Authorize</button>
-    <button onclick="sendData()">💾 Сохранить отчет</button>
 </body>
 </html>
