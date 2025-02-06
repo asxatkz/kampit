@@ -104,7 +104,12 @@
             document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
             // Загружаем остаток на утро из Google Таблицы
-            let response = await fetch(SCRIPT_URL + "?mode=getBalance");
+            let response = await fetch(SCRIPT_URL + "?mode=getBalance", {
+    method: "GET",
+    headers: {
+        "Content-Type": "application/json"
+    }
+});
             let data = await response.json();
             document.getElementById("balanceMorning").value = data.balance || 0;
         });
