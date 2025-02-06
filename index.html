@@ -47,6 +47,7 @@
         }
     </style>
     <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         const CLIENT_ID = '182123418974-9e7qbmj17i0qi9gj44ctedr41d5a34fm.apps.googleusercontent.com'; // Вставьте ваш OAuth Client ID
         const API_KEY = 'AIzaSyDk9XMOKbXaH_pFGUYv_D3NnnLbtnUcbEM'; // Вставьте ваш API Key
@@ -56,11 +57,6 @@
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
-
-        document.addEventListener("DOMContentLoaded", function() {
-            gapi.load('client', initializeGapiClient);
-            gisLoaded();
-        });
 
         function gapiLoaded() {
             gapi.load('client', initializeGapiClient);
@@ -152,6 +148,12 @@
                 alert("❌ Ошибка сохранения данных!");
             }
         }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("date").value = new Date().toISOString().split("T")[0];
+            gapiLoaded();
+            gisLoaded();
+        });
     </script>
 </head>
 <body>
