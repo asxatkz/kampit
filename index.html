@@ -2,110 +2,135 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Кассовый учет</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учет магазина</title>
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 20px auto; padding: 20px; }
-        .section { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; }
-        input, button { margin: 5px; padding: 8px; width: 200px; }
-        .balance { font-size: 20px; color: #27ae60; font-weight: bold; }
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        input, button {
+            margin: 8px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 250px;
+            transition: all 0.3s ease;
+        }
+        input:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 5px rgba(52,152,219,0.3);
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            width: auto;
+            padding: 12px 25px;
+        }
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
-    <h1>Ежедневный отчет</h1>
-    
+    <h1>📊 Учет магазина</h1>
+
+    <!-- Дата и Остаток -->
     <div class="section">
-        <div>
-            <label>Дата: <input type="date" id="date" required></label>
-        </div>
-        <div>
-            Остаток за вчера: <span class="balance" id="lastBalance">...</span>
-        </div>
+        <h2>📅 Дата и Остаток</h2>
+        <label>📅 Дата: <input type="date" id="date" readonly></label>
+        <label>💰 Остаток на утро: <input type="number" id="balanceMorning" readonly></label>
     </div>
 
+    <!-- Продажи -->
     <div class="section">
-        <h3>Продажи</h3>
-        <label>Терминал: <input type="number" id="terminal" required></label><br>
-        <label>Наличные: <input type="number" id="cash" required></label><br>
-        <label>Переводы: <input type="number" id="transfers" required></label>
+        <h2>💵 Продажи</h2>
+        <label>💳 Терминал: <input type="number" id="terminal"></label>
+        <label>💵 Наличные: <input type="number" id="cash"></label>
+        <label>📲 Переводы: <input type="number" id="transfers"></label>
     </div>
 
+    <!-- Закупки -->
     <div class="section">
-        <h3>Расходы</h3>
-        <label>Закупки: <input type="number" id="purchases" required></label><br>
-        <label>Зарплаты: <input type="number" id="salary" required></label>
+        <h2>📦 Закупки</h2>
+        <label>🏢 Контрагент: <input type="text" id="supplier"></label>
+        <label>💰 Закуп за нал: <input type="number" id="purchaseCash"></label>
+        <label>💳 Закуп за безнал: <input type="number" id="purchaseNonCash"></label>
+        <label>🏷️ Розничная цена: <input type="number" id="retailPrice"></label>
     </div>
 
+    <!-- Расходы -->
     <div class="section">
-        <h3>Итоги</h3>
-        Выручка: <span class="balance" id="revenue">0</span><br>
-        Остаток на конец дня: <span class="balance" id="endBalance">0</span>
+        <h2>👥 Расходы</h2>
+        <label>👩‍💼 Зарплата Алтынай: <input type="number" id="salaryAltynai"></label>
+        <label>👩‍💻 Зарплата Самал: <input type="number" id="salarySamal"></label>
+        <label>💸 Прочие расходы: <input type="number" id="otherExpenses"></label>
     </div>
 
-    <button onclick="saveData()">Сохранить отчет</button>
+    <!-- Итог -->
+    <div class="section">
+        <h2>📊 Итог</h2>
+        <label>💰 Выручка: <input type="number" id="revenue" readonly></label>
+        <label>💰 Остаток на завтра: <input type="number" id="balanceTomorrow" readonly></label>
+    </div>
+
+    <button onclick="sendData()">💾 Сохранить отчет</button>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec';
-        
-        // Загрузка остатка при открытии
-        fetch(SCRIPT_URL)
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('lastBalance').textContent = data.lastBalance;
-                calculate();
-            });
+        const SCRIPT_URL = "ВАШ_SCRIPT_URL"; // Вставьте URL вашего Google Apps Script
 
-        // Автоматический расчет
-        function calculate() {
-            const lastBalance = parseFloat(document.getElementById('lastBalance').textContent) || 0;
-            const terminal = parseFloat(document.getElementById('terminal').value) || 0;
-            const cash = parseFloat(document.getElementById('cash').value) || 0;
-            const transfers = parseFloat(document.getElementById('transfers').value) || 0;
-            const purchases = parseFloat(document.getElementById('purchases').value) || 0;
-            const salary = parseFloat(document.getElementById('salary').value) || 0;
-            
-            const revenue = (terminal + cash + transfers) - purchases - salary;
-            const endBalance = lastBalance + revenue;
-            
-            document.getElementById('revenue').textContent = revenue;
-            document.getElementById('endBalance').textContent = endBalance;
-        }
+        document.addEventListener("DOMContentLoaded", async function() {
+            document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
-        // Обработчики изменений
-        document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', calculate);
+            // Загружаем остаток на утро из Google Таблицы
+            let response = await fetch(SCRIPT_URL + "?mode=getBalance");
+            let data = await response.json();
+            document.getElementById("balanceMorning").value = data.balance || 0;
         });
 
-        // Сохранение данных
-        async function saveData() {
-            const data = {
-                date: document.getElementById('date').value,
-                startBalance: parseFloat(document.getElementById('lastBalance').textContent),
-                terminal: parseFloat(document.getElementById('terminal').value),
-                cash: parseFloat(document.getElementById('cash').value),
-                transfers: parseFloat(document.getElementById('transfers').value),
-                purchases: parseFloat(document.getElementById('purchases').value),
-                salary: parseFloat(document.getElementById('salary').value),
-                revenue: parseFloat(document.getElementById('revenue').textContent),
-                endBalance: parseFloat(document.getElementById('endBalance').textContent)
-            };
+        async function sendData() {
+            let balanceMorning = parseFloat(document.getElementById("balanceMorning").value) || 0;
+            let terminal = parseFloat(document.getElementById("terminal").value) || 0;
+            let cash = parseFloat(document.getElementById("cash").value) || 0;
+            let transfers = parseFloat(document.getElementById("transfers").value) || 0;
+            let purchaseCash = parseFloat(document.getElementById("purchaseCash").value) || 0;
+            let purchaseNonCash = parseFloat(document.getElementById("purchaseNonCash").value) || 0;
+            let salaryAltynai = parseFloat(document.getElementById("salaryAltynai").value) || 0;
+            let salarySamal = parseFloat(document.getElementById("salarySamal").value) || 0;
+            let otherExpenses = parseFloat(document.getElementById("otherExpenses").value) || 0;
 
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                if(result.status === 'success') {
-                    alert('Данные сохранены!');
-                    location.reload();
-                }
-            } catch (error) {
-                alert('Ошибка: ' + error.message);
-            }
+            let revenue = terminal + cash + transfers + purchaseCash - balanceMorning;
+            let balanceTomorrow = revenue - salaryAltynai - salarySamal - otherExpenses;
+
+            document.getElementById("revenue").value = revenue.toFixed(2);
+            document.getElementById("balanceTomorrow").value = balanceTomorrow.toFixed(2);
+
+            let data = { date: document.getElementById("date").value, balanceMorning, terminal, cash, transfers, purchaseCash, purchaseNonCash, salaryAltynai, salarySamal, otherExpenses, revenue, balanceTomorrow };
+
+            await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+
+            alert("✅ Данные успешно сохранены!");
         }
     </script>
 </body>
