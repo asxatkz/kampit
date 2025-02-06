@@ -33,18 +33,12 @@
             width: 250px;
             transition: all 0.3s ease;
         }
-        input:focus {
-            border-color: #3498db;
-            outline: none;
-            box-shadow: 0 0 5px rgba(52,152,219,0.3);
-        }
         button {
             background: #3498db;
             color: white;
             border: none;
             cursor: pointer;
             font-weight: bold;
-            width: auto;
             padding: 12px 25px;
         }
         button:hover {
@@ -98,44 +92,58 @@
     <button onclick="sendData()">💾 Сохранить отчет</button>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec"; // Вставьте URL вашего Google Apps Script
+        const SCRIPT_URL = "ВАШ_SCRIPT_URL"; // Вставьте URL вашего Google Apps Script
 
         document.addEventListener("DOMContentLoaded", async function() {
             document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
             // Загружаем остаток на утро из Google Таблицы
-            let response = await fetch(SCRIPT_URL + "?mode=getBalance", {
-    method: "GET",
-    headers: {
-        "Content-Type": "application/json"
-    }
-});
-            let data = await response.json();
-            document.getElementById("balanceMorning").value = data.balance || 0;
+            try {
+                let response = await fetch(SCRIPT_URL + "?mode=getBalance", {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" }
+                });
+                let data = await response.json();
+                document.getElementById("balanceMorning").value = data.balance || 0;
+            } catch (error) {
+                console.error("Ошибка загрузки остатка:", error);
+            }
         });
 
         async function sendData() {
-            let balanceMorning = parseFloat(document.getElementById("balanceMorning").value) || 0;
-            let terminal = parseFloat(document.getElementById("terminal").value) || 0;
-            let cash = parseFloat(document.getElementById("cash").value) || 0;
-            let transfers = parseFloat(document.getElementById("transfers").value) || 0;
-            let purchaseCash = parseFloat(document.getElementById("purchaseCash").value) || 0;
-            let purchaseNonCash = parseFloat(document.getElementById("purchaseNonCash").value) || 0;
-            let salaryAltynai = parseFloat(document.getElementById("salaryAltynai").value) || 0;
-            let salarySamal = parseFloat(document.getElementById("salarySamal").value) || 0;
-            let otherExpenses = parseFloat(document.getElementById("otherExpenses").value) || 0;
+            try {
+                let data = {
+                    date: document.getElementById("date").value,
+                    balanceMorning: parseFloat(document.getElementById("balanceMorning").value) || 0,
+                    terminal: parseFloat(document.getElementById("terminal").value) || 0,
+                    cash: parseFloat(document.getElementById("cash").value) || 0,
+                    transfers: parseFloat(document.getElementById("transfers").value) || 0,
+                    purchaseCash: parseFloat(document.getElementById("purchaseCash").value) || 0,
+                    purchaseNonCash: parseFloat(document.getElementById("purchaseNonCash").value) || 0,
+                    salaryAltynai: parseFloat(document.getElementById("salaryAltynai").value) || 0,
+                    salarySamal: parseFloat(document.getElementById("salarySamal").value) || 0,
+                    otherExpenses: parseFloat(document.getElementById("otherExpenses").value) || 0,
+                    revenue: parseFloat(document.getElementById("revenue").value) || 0,
+                    balanceTomorrow: parseFloat(document.getElementById("balanceTomorrow").value) || 0
+                };
 
-            let revenue = terminal + cash + transfers + purchaseCash - balanceMorning;
-            let balanceTomorrow = revenue - salaryAltynai - salarySamal - otherExpenses;
+                let response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
 
-            document.getElementById("revenue").value = revenue.toFixed(2);
-            document.getElementById("balanceTomorrow").value = balanceTomorrow.toFixed(2);
+                let result = await response.json();
 
-            let data = { date: document.getElementById("date").value, balanceMorning, terminal, cash, transfers, purchaseCash, purchaseNonCash, salaryAltynai, salarySamal, otherExpenses, revenue, balanceTomorrow };
-
-            await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-
-            alert("✅ Данные успешно сохранены!");
+                if (result.status === "success") {
+                    alert("✅ Данные успешно сохранены!");
+                } else {
+                    alert("❌ Ошибка сохранения данных!");
+                }
+            } catch (error) {
+                console.error("Ошибка отправки данных:", error);
+                alert("❌ Ошибка сети при отправке данных!");
+            }
         }
     </script>
 </body>
