@@ -2,134 +2,109 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Учет магазина</title>
+    <title>Кассовый учет</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 20px auto; padding: 20px; }
+        .section { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; }
+        input, button { margin: 5px; padding: 8px; width: 200px; }
+        .balance { font-size: 20px; color: #27ae60; font-weight: bold; }
+    </style>
 </head>
 <body>
-    <h1>📊 Ежедневный отчет магазина</h1>
-
-    <div class="section">
-        <div class="header-row">
-            <label>📅 Дата: <input type="date" id="date" required></label>
-            <label>💰 Остаток: <input type="number" id="balance" readonly></label>
-        </div>
-    </div>
-
-    <div class="section">
-        <h2>💵 Продажи</h2>
-        <label>💳 Терминал: <input type="number" id="terminal" required></label>
-        <label>💵 Наличные: <input type="number" id="cash" required></label>
-        <label>📲 Переводы: <input type="number" id="transfers" required></label>
-        <label>✅ Итого: <input type="number" id="total" readonly></label>
-    </div>
-
-    <div class="section">
-        <h2>📦 Закупки 
-            <button type="button" onclick="addSupply()" style="background: #27ae60">+ Добавить поставщика</button>
-        </h2>
-        <div id="supplies">
-            <div class="supply-section">
-                <div class="dynamic-row">
-                    <input type="text" placeholder="Название поставщика" class="supplier">
-                    <input type="number" placeholder="Цена закупа" class="price">
-                    <input type="number" placeholder="Цена продажи" class="sale">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h2>👥 Зарплаты</h2>
-        <label>Алтынай: <input type="number" id="altynai" required></label>
-        <label>Самал: <input type="number" id="samal" required></label>
-    </div>
-
-    <div class="error-message" id="errorMessage"></div>
+    <h1>Ежедневный отчет</h1>
     
-    <button onclick="sendData()" style="background: #e67e22">💾 Сохранить отчет</button>
+    <div class="section">
+        <div>
+            <label>Дата: <input type="date" id="date" required></label>
+        </div>
+        <div>
+            Остаток за вчера: <span class="balance" id="lastBalance">...</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Продажи</h3>
+        <label>Терминал: <input type="number" id="terminal" required></label><br>
+        <label>Наличные: <input type="number" id="cash" required></label><br>
+        <label>Переводы: <input type="number" id="transfers" required></label>
+    </div>
+
+    <div class="section">
+        <h3>Расходы</h3>
+        <label>Закупки: <input type="number" id="purchases" required></label><br>
+        <label>Зарплаты: <input type="number" id="salary" required></label>
+    </div>
+
+    <div class="section">
+        <h3>Итоги</h3>
+        Выручка: <span class="balance" id="revenue">0</span><br>
+        Остаток на конец дня: <span class="balance" id="endBalance">0</span>
+    </div>
+
+    <button onclick="saveData()">Сохранить отчет</button>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyiBzbaoGem_qJIbU6Czl42itWVGRKxqDrmVyej_wUL10TzIZPZESjv2p469ehaVllE/exec";
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec';
         
-        // Получаем последний остаток с Google Таблицы
-        async function getLastBalance() {
-            const response = await fetch(SCRIPT_URL + '?action=getBalance');
-            const data = await response.json();
-            return data.balance || 0;
-        }
-
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', async () => {
-            const lastBalance = await getLastBalance();
-            document.getElementById('balance').value = lastBalance;
-        });
+        // Загрузка остатка при открытии
+        fetch(SCRIPT_URL)
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('lastBalance').textContent = data.lastBalance;
+                calculate();
+            });
 
         // Автоматический расчет
-        const calculateTotal = () => {
+        function calculate() {
+            const lastBalance = parseFloat(document.getElementById('lastBalance').textContent) || 0;
             const terminal = parseFloat(document.getElementById('terminal').value) || 0;
             const cash = parseFloat(document.getElementById('cash').value) || 0;
             const transfers = parseFloat(document.getElementById('transfers').value) || 0;
-            document.getElementById('total').value = terminal + cash + transfers;
-        };
-
-        ['terminal', 'cash', 'transfers'].forEach(id => {
-            document.getElementById(id).addEventListener('input', calculateTotal);
-        });
-
-        // Добавление поставщиков
-        function addSupply() {
-            const div = document.createElement('div');
-            div.className = 'supply-section';
-            div.innerHTML = `
-                <div class="dynamic-row">
-                    <input type="text" placeholder="Название поставщика" class="supplier">
-                    <input type="number" placeholder="Цена закупа" class="price">
-                    <input type="number" placeholder="Цена продажи" class="sale">
-                    <button onclick="this.parentElement.parentElement.remove()" 
-                            style="background: #e74c3c; padding: 8px 12px">×</button>
-                </div>
-            `;
-            document.getElementById('supplies').appendChild(div);
+            const purchases = parseFloat(document.getElementById('purchases').value) || 0;
+            const salary = parseFloat(document.getElementById('salary').value) || 0;
+            
+            const revenue = (terminal + cash + transfers) - purchases - salary;
+            const endBalance = lastBalance + revenue;
+            
+            document.getElementById('revenue').textContent = revenue;
+            document.getElementById('endBalance').textContent = endBalance;
         }
 
-        // Отправка данных
-        async function sendData() {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.style.display = 'none';
+        // Обработчики изменений
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', calculate);
+        });
+
+        // Сохранение данных
+        async function saveData() {
+            const data = {
+                date: document.getElementById('date').value,
+                startBalance: parseFloat(document.getElementById('lastBalance').textContent),
+                terminal: parseFloat(document.getElementById('terminal').value),
+                cash: parseFloat(document.getElementById('cash').value),
+                transfers: parseFloat(document.getElementById('transfers').value),
+                purchases: parseFloat(document.getElementById('purchases').value),
+                salary: parseFloat(document.getElementById('salary').value),
+                revenue: parseFloat(document.getElementById('revenue').textContent),
+                endBalance: parseFloat(document.getElementById('endBalance').textContent)
+            };
 
             try {
-                const data = {
-                    date: document.getElementById('date').value,
-                    terminal: document.getElementById('terminal').value,
-                    cash: document.getElementById('cash').value,
-                    transfers: document.getElementById('transfers').value,
-                    total: document.getElementById('total').value,
-                    altynai: document.getElementById('altynai').value,
-                    samal: document.getElementById('samal').value,
-                    balance: document.getElementById('balance').value || "0",
-                    supplies: Array.from(document.querySelectorAll('.supply-section')).map(section => ({
-                        supplier: section.querySelector('.supplier').value,
-                        price: section.querySelector('.price').value,
-                        sale: section.querySelector('.sale').value
-                    }))
-                };
-
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(data)
                 });
-
+                
                 const result = await response.json();
-                alert('✅ Данные успешно отправлены в Google Таблицу!');
-                localStorage.setItem('lastBalance', result.newBalance); // Сохранить новый остаток
-                location.reload();
+                if(result.status === 'success') {
+                    alert('Данные сохранены!');
+                    location.reload();
+                }
             } catch (error) {
-                errorMessage.textContent = `❌ Ошибка: ${error.message}`;
-                errorMessage.style.display = 'block';
-                window.scrollTo(0, 0);
+                alert('Ошибка: ' + error.message);
             }
         }
     </script>
