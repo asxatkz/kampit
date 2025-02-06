@@ -9,13 +9,7 @@
     <h2>Выберите дату:</h2>
     <input type="date" id="datePicker">
     
-    <div id="initialBalanceBlock" style="display: none;">
-        <h3>Введите начальный остаток:</h3>
-        <input type="number" id="initialBalance" value="0">
-        <button onclick="saveInitialBalance()">Установить начальный остаток</button>
-    </div>
-
-    <h3>Остаток наличных за предыдущий день: <span id="cashBalance">—</span></h3>
+    <h3>Остаток наличных: <span id="cashBalance">—</span></h3>
     
     <label>Продажи: <input type="number" id="sales" value="0"></label><br>
     <label>Расходы: <input type="number" id="expenses" value="0"></label><br>
@@ -32,47 +26,65 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
         let selectedRow = 0;
 
-        async function getPreviousDayBalance() {
+        // Устанавливаем сегодняшнюю дату при загрузке страницы
+        window.onload = function() {
             const today = new Date();
-            const previousDay = new Date(today);
-            previousDay.setDate(today.getDate() - 1);
-            
-            const previousDayRow = previousDay.getDate();
-            
-            const RANGE = "G2:G100";
+            document.getElementById("datePicker").valueAsDate = today;
+            selectedRow = today.getDate();
+            loadPreviousDayData(today);
+        };
+
+        async function fetchData() {
+            const RANGE = "G2:G100"; // Изменен диапазон на столбец G (итоговые суммы)
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            return data.values || [];
+        }
+
+        // Функция загрузки данных за предыдущий день
+        async function loadPreviousDayData(currentDate) {
+            const previousDay = new Date(currentDate);
+            previousDay.setDate(currentDate.getDate() - 1);
+            const prevDayRow = previousDay.getDate();
             
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                const values = data.values || [];
-                
-                if (values[previousDayRow - 2] && values[previousDayRow - 2][0]) {
-                    document.getElementById("cashBalance").innerText = values[previousDayRow - 2][0];
-                    document.getElementById("initialBalanceBlock").style.display = "none";
-                } else {
-                    document.getElementById("cashBalance").innerText = "Нет данных за предыдущий день";
-                    document.getElementById("initialBalanceBlock").style.display = "block";
-                }
-            } catch (error) {
-                console.error("Ошибка получения данных:", error);
-                document.getElementById("cashBalance").innerText = "Ошибка получения данных";
-                document.getElementById("initialBalanceBlock").style.display = "block";
+            const cashData = await fetchData();
+            if (cashData[prevDayRow - 2]) {
+                document.getElementById("cashBalance").innerText = cashData[prevDayRow - 2][0];
+            } else {
+                document.getElementById("cashBalance").innerText = "0"; // Если нет данных, показываем 0
             }
         }
 
-        function saveInitialBalance() {
-            const initialBalance = document.getElementById("initialBalance").value;
-            if (!initialBalance) {
-                alert("Введите начальный остаток!");
+        // Обработчик выбора даты
+        document.getElementById("datePicker").addEventListener("change", async function() {
+            const selectedDate = new Date(this.value);
+            selectedRow = selectedDate.getDate();
+            await loadPreviousDayData(selectedDate);
+        });
+
+        function calculateTotal() {
+            const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
+            const sales = parseFloat(document.getElementById("sales").value) || 0;
+            const expenses = parseFloat(document.getElementById("expenses").value) || 0;
+            const total = cashBalance + sales - expenses;
+            document.getElementById("totalBalance").innerText = total;
+        }
+
+        function saveToSheet() {
+            const totalBalance = document.getElementById("totalBalance").innerText;
+            if (selectedRow === 0 || totalBalance === "—") {
+                alert("Выберите дату и рассчитайте итог!");
                 return;
             }
 
+            // Создаем и настраиваем форму
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = GAS_URL;
             form.target = '_blank';
 
+            // Добавляем поля формы
             const addField = (name, value) => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
@@ -81,26 +93,25 @@
                 form.appendChild(input);
             };
 
-            // Сохраняем начальный остаток в первый день месяца
-            addField('row', '2');  // Строка 2 для первого дня
-            addField('value', initialBalance);
-            addField('isInitial', 'true');
+            addField('row', selectedRow + 1);
+            addField('value', totalBalance);
+            addField('sales', document.getElementById("sales").value);
+            addField('expenses', document.getElementById("expenses").value);
 
+            // Добавляем форму на страницу и отправляем
             document.body.appendChild(form);
             form.submit();
 
+            // Удаляем форму после отправки
             setTimeout(() => {
                 document.body.removeChild(form);
-                setTimeout(getPreviousDayBalance, 2000);
-                setTimeout(() => {
-                    alert("Начальный остаток установлен!");
-                }, 2100);
+                // Обновляем данные после небольшой задержки
+                setTimeout(async () => {
+                    await loadPreviousDayData(new Date(document.getElementById("datePicker").value));
+                    alert("Данные успешно сохранены!");
+                }, 2000);
             }, 100);
         }
-
-        // Остальной код остается без изменений...
-        // (оставьте весь существующий код fetchData, calculateTotal, saveToSheet и т.д.)
-
     </script>
 </body>
 </html>
