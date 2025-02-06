@@ -26,6 +26,7 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";  
         let selectedRow = 0;
 
+        // Функция для получения данных через Google Sheets API
         async function fetchData() {
             const RANGE = "H2:H100";
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
@@ -34,6 +35,7 @@
             return data.values || [];
         }
 
+        // Выбор даты и загрузка остатка наличных
         document.getElementById("datePicker").addEventListener("change", async function() {
             const selectedDate = new Date(this.value);
             const day = selectedDate.getDate();
@@ -47,6 +49,7 @@
             }
         });
 
+        // Расчет итоговой суммы
         function calculateTotal() {
             const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
             const sales = parseFloat(document.getElementById("sales").value) || 0;
@@ -55,6 +58,7 @@
             document.getElementById("totalBalance").innerText = total;
         }
 
+        // Запись итоговой суммы в таблицу через Google Apps Script (GAS)
         async function saveToSheet() {
             const totalBalance = document.getElementById("totalBalance").innerText;
             if (selectedRow === 0 || totalBalance === "—") {
@@ -62,16 +66,18 @@
                 return;
             }
 
-            const response = await fetch(GAS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ row: selectedRow + 1, value: totalBalance })
-            });
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ row: selectedRow + 1, value: totalBalance })
+                });
 
-            if (response.ok) {
-                alert("Итог сохранён в таблице!");
-            } else {
-                alert("Ошибка сохранения!");
+                const result = await response.text();
+                alert("Ответ сервера: " + result);
+            } catch (error) {
+                console.error("Ошибка сохранения:", error);
+                alert("Ошибка записи в таблицу!");
             }
         }
     </script>
