@@ -360,82 +360,95 @@
         }
 
         function saveToSheet() {
-            try {
-                const totalBalance = document.getElementById("totalBalance").innerText;
-                if (totalBalance === "—") {
-                    showMessage("Рассчитайте итог перед сохранением!", true);
-                    return;
-                }
-
-                // Создаем FormData для отправки данных
-                const formData = new FormData();
-                
-                formData.append('date', selectedDate.toISOString());
-                formData.append('month', getSheetNameForMonth(selectedDate));
-                formData.append('value', totalBalance);
-                formData.append('terminal', document.getElementById("terminal").value || "0");
-                formData.append('cash', document.getElementById("cash").value || "0");
-                formData.append('transfer', document.getElementById("transfer").value || "0");
-                formData.append('contractor', document.getElementById("contractor").value || "");
-                formData.append('cashPurchase', document.getElementById("cashPurchase").value || "0");
-                formData.append('cardPurchase', document.getElementById("cardPurchase").value || "0");
-                formData.append('retailPrice', document.getElementById("retailPrice").value || "0");
-                formData.append('salaryAltynai', document.getElementById("salaryAltynai").value || "0");
-                formData.append('salarySamal', document.getElementById("salarySamal").value || "0");
-                formData.append('revenue', document.getElementById("revenue").innerText || "0");
-
-                // Собираем дополнительные расходы
-                const additionalExpenses = [];
-                document.querySelectorAll('.expense-item').forEach(item => {
-                    const desc = item.querySelector('[id^="expenseDesc"]').value;
-                    const amount = item.querySelector('[id^="expenseAmount"]').value;
-                    if (desc && amount) {
-                        additionalExpenses.push(`${desc}: ${amount}`);
-                    }
-                });
-                formData.append('additionalExpenses', additionalExpenses.join('; '));
-
-                showMessage("Сохранение данных...");
-
-                // Отправляем данные через fetch
-                fetch(GAS_URL, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(async (response) => {
-                    if (response.includes("Success")) {
-                        await loadPreviousDayData(selectedDate);
-                        showMessage("Данные успешно сохранены!");
-                        
-                        // Очищаем поля после сохранения
-                        document.getElementById("terminal").value = "0";
-                        document.getElementById("cash").value = "0";
-                        document.getElementById("transfer").value = "0";
-                        document.getElementById("contractor").value = "";
-                        document.getElementById("cashPurchase").value = "0";
-                        document.getElementById("cardPurchase").value = "0";
-                        document.getElementById("retailPrice").value = "0";
-                        document.getElementById("salaryAltynai").value = "0";
-                        document.getElementById("salarySamal").value = "0";
-                        document.getElementById("revenue").innerText = "0";
-                        document.getElementById("nextDayBalance").innerText = "0";
-                        document.getElementById("totalBalance").innerText = "—";
-                        
-                        // Очищаем дополнительные расходы
-                        document.getElementById('additionalExpenses').innerHTML = '';
-                        expenseCounter = 0;
-                    } else {
-                        throw new Error(response);
-                    }
-                })
-                .catch(error => {
-                    showMessage('Ошибка сохранения: ' + error.message, true);
-                });
-            } catch (error) {
-                showMessage('Ошибка сохранения: ' + error.message, true);
-            }
+    try {
+        const totalBalance = document.getElementById("totalBalance").innerText;
+        if (totalBalance === "—") {
+            showMessage("Рассчитайте итог перед сохранением!", true);
+            return;
         }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = GAS_URL;
+        form.target = 'hidden_iframe';
+
+        let iframe = document.getElementById('hidden_iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.name = 'hidden_iframe';
+            iframe.id = 'hidden_iframe';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+        }
+
+        const addField = (name, value) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        };
+
+        // Добавляем все поля формы
+        addField('date', selectedDate.toISOString());
+        addField('month', getSheetNameForMonth(selectedDate));
+        addField('value', totalBalance);
+        addField('terminal', document.getElementById("terminal").value || "0");
+        addField('cash', document.getElementById("cash").value || "0");
+        addField('transfer', document.getElementById("transfer").value || "0");
+        addField('contractor', document.getElementById("contractor").value || "");
+        addField('cashPurchase', document.getElementById("cashPurchase").value || "0");
+        addField('cardPurchase', document.getElementById("cardPurchase").value || "0");
+        addField('retailPrice', document.getElementById("retailPrice").value || "0");
+        addField('salaryAltynai', document.getElementById("salaryAltynai").value || "0");
+        addField('salarySamal', document.getElementById("salarySamal").value || "0");
+        addField('revenue', document.getElementById("revenue").innerText || "0");
+
+        // Собираем дополнительные расходы
+        const additionalExpenses = [];
+        document.querySelectorAll('.expense-item').forEach(item => {
+            const desc = item.querySelector('[id^="expenseDesc"]').value;
+            const amount = item.querySelector('[id^="expenseAmount"]').value;
+            if (desc && amount) {
+                additionalExpenses.push(`${desc}: ${amount}`);
+            }
+        });
+        addField('additionalExpenses', additionalExpenses.join('; '));
+
+        showMessage("Сохранение данных...");
+
+        document.body.appendChild(form);
+        form.submit();
+
+        setTimeout(() => {
+            document.body.removeChild(form);
+            setTimeout(async () => {
+                await loadPreviousDayData(selectedDate);
+                showMessage("Данные успешно сохранены!");
+                
+                // Очищаем поля после сохранения
+                document.getElementById("terminal").value = "0";
+                document.getElementById("cash").value = "0";
+                document.getElementById("transfer").value = "0";
+                document.getElementById("contractor").value = "";
+                document.getElementById("cashPurchase").value = "0";
+                document.getElementById("cardPurchase").value = "0";
+                document.getElementById("retailPrice").value = "0";
+                document.getElementById("salaryAltynai").value = "0";
+                document.getElementById("salarySamal").value = "0";
+                document.getElementById("revenue").innerText = "0";
+                document.getElementById("nextDayBalance").innerText = "0";
+                document.getElementById("totalBalance").innerText = "—";
+                
+                // Очищаем дополнительные расходы
+                document.getElementById('additionalExpenses').innerHTML = '';
+                expenseCounter = 0;
+            }, 2000);
+        }, 100);
+    } catch (error) {
+        showMessage('Ошибка сохранения: ' + error.message, true);
+    }
+}
     </script>
 </body>
 </html>
