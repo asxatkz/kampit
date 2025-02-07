@@ -204,9 +204,20 @@
         let expenseCounter = 0;
 
         function getLocalDate(date = new Date()) {
-            // Преобразуем UTC в местное время (UTC+5)
-            const localDate = new Date(date.getTime() + (5 * 60 * 60 * 1000));
+            // Получаем текущую дату в UTC
+            const utcDate = new Date(date);
+            // Устанавливаем часовой пояс UTC+5 (5 * 60 минут)
+            const localDate = new Date(utcDate.getTime() + (5 * 60 * 60 * 1000));
+            
+            // Если время между 00:00 и 05:00, возвращаем предыдущий день
+            if (localDate.getHours() >= 0 && localDate.getHours() < 5) {
+                localDate.setDate(localDate.getDate() - 1);
+            }
+            
+            // Устанавливаем время в 00:00:00
             localDate.setHours(0, 0, 0, 0);
+            console.log('UTC Date:', utcDate);
+            console.log('Local Date:', localDate);
             return localDate;
         }
 
@@ -274,25 +285,13 @@
                 previousDay.setDate(currentDate.getDate() - 1);
                 
                 const cashData = await fetchData(previousDay);
-                const prevDayRow = previousDay.getDate();
                 
-                if (cashData[prevDayRow - 1]) {
-                    document.getElementById("cashBalance").innerText = cashData[prevDayRow - 1][0];
+                // Получаем последнее значение из массива (последняя заполненная ячейка)
+                const lastValue = cashData[cashData.length - 1];
+                if (lastValue) {
+                    document.getElementById("cashBalance").innerText = lastValue[0];
                 } else {
-                    if (currentDate.getDate() === 1) {
-                        const lastMonthDate = new Date(currentDate);
-                        lastMonthDate.setDate(0);
-                        const lastMonthData = await fetchData(lastMonthDate);
-                        const lastDayOfMonth = lastMonthDate.getDate();
-                        
-                        if (lastMonthData[lastDayOfMonth - 1]) {
-                            document.getElementById("cashBalance").innerText = lastMonthData[lastDayOfMonth - 1][0];
-                        } else {
-                            document.getElementById("cashBalance").innerText = "0";
-                        }
-                    } else {
-                        document.getElementById("cashBalance").innerText = "0";
-                    }
+                    document.getElementById("cashBalance").innerText = "0";
                 }
             } catch (error) {
                 showMessage('Ошибка загрузки данных: ' + error.message, true);
@@ -368,42 +367,22 @@
                     return;
                 }
 
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = GAS_URL;
-                form.target = 'hidden_iframe';
-
-                let iframe = document.getElementById('hidden_iframe');
-                if (!iframe) {
-                    iframe = document.createElement('iframe');
-                    iframe.name = 'hidden_iframe';
-                    iframe.id = 'hidden_iframe';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                }
-
-                const addField = (name, value) => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = name;
-                    input.value = value;
-                    form.appendChild(input);
-                };
-
-                // Добавляем все поля формы
-                addField('date', selectedDate.toISOString());
-                addField('month', getSheetNameForMonth(selectedDate));
-                addField('value', totalBalance);
-                addField('terminal', document.getElementById("terminal").value);
-                addField('cash', document.getElementById("cash").value);
-                addField('transfer', document.getElementById("transfer").value);
-                addField('contractor', document.getElementById("contractor").value);
-                addField('cashPurchase', document.getElementById("cashPurchase").value);
-                addField('cardPurchase', document.getElementById("cardPurchase").value);
-                addField('retailPrice', document.getElementById("retailPrice").value);
-                addField('salaryAltynai', document.getElementById("salaryAltynai").value);
-                addField('salarySamal', document.getElementById("salarySamal").value);
-                addField('revenue', document.getElementById("revenue").innerText);
+                // Создаем FormData для отправки данных
+                const formData = new FormData();
+                
+                formData.append('date', selectedDate.toISOString());
+                formData.append('month', getSheetNameForMonth(selectedDate));
+                formData.append('value', totalBalance);
+                formData.append('terminal', document.getElementById("terminal").value || "0");
+                formData.append('cash', document.getElementById("cash").value || "0");
+                formData.append('transfer', document.getElementById("transfer").value || "0");
+                formData.append('contractor', document.getElementById("contractor").value || "");
+                formData.append('cashPurchase', document.getElementById("cashPurchase").value || "0");
+                formData.append('cardPurchase', document.getElementById("cardPurchase").value || "0");
+                formData.append('retailPrice', document.getElementById("retailPrice").value || "0");
+                formData.append('salaryAltynai', document.getElementById("salaryAltynai").value || "0");
+                formData.append('salarySamal', document.getElementById("salarySamal").value || "0");
+                formData.append('revenue', document.getElementById("revenue").innerText || "0");
 
                 // Собираем дополнительные расходы
                 const additionalExpenses = [];
@@ -414,16 +393,18 @@
                         additionalExpenses.push(`${desc}: ${amount}`);
                     }
                 });
-                addField('additionalExpenses', additionalExpenses.join('; '));
+                formData.append('additionalExpenses', additionalExpenses.join('; '));
 
                 showMessage("Сохранение данных...");
 
-                document.body.appendChild(form);
-                form.submit();
-
-                setTimeout(() => {
-                    document.body.removeChild(form);
-                    setTimeout(async () => {
+                // Отправляем данные через fetch
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(async (response) => {
+                    if (response.includes("Success")) {
                         await loadPreviousDayData(selectedDate);
                         showMessage("Данные успешно сохранены!");
                         
@@ -444,8 +425,13 @@
                         // Очищаем дополнительные расходы
                         document.getElementById('additionalExpenses').innerHTML = '';
                         expenseCounter = 0;
-                    }, 2000);
-                }, 100);
+                    } else {
+                        throw new Error(response);
+                    }
+                })
+                .catch(error => {
+                    showMessage('Ошибка сохранения: ' + error.message, true);
+                });
             } catch (error) {
                 showMessage('Ошибка сохранения: ' + error.message, true);
             }
