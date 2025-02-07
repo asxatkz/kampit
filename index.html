@@ -200,15 +200,12 @@
         const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s";
         const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFQdMdUSFFHri6NFvBJ8_71YnfWAW1b70NI_iOoAGH6J5dI_yndwoiOO_k_x6o0Q4bGQ/exec";
-        let selectedRow = 0;
         let selectedDate = null;
         let expenseCounter = 0;
 
         function getLocalDate(date = new Date()) {
+            // Преобразуем UTC в местное время (UTC+5)
             const localDate = new Date(date.getTime() + (5 * 60 * 60 * 1000));
-            if (localDate.getHours() >= 0 && localDate.getHours() < 5) {
-                localDate.setDate(localDate.getDate() - 1);
-            }
             localDate.setHours(0, 0, 0, 0);
             return localDate;
         }
@@ -257,7 +254,7 @@
         async function fetchData(month) {
             try {
                 const sheetName = getSheetNameForMonth(month);
-                const RANGE = `${sheetName}!G1:G100`;
+                const RANGE = `${sheetName}!M1:M100`; // Изменено с G на M
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -303,7 +300,6 @@
         }
 
         function handleDateSelection(date) {
-            selectedRow = date.getDate();
             selectedDate = date;
             console.log('Selected date:', date);
             loadPreviousDayData(date);
@@ -317,11 +313,14 @@
 
         function calculateTotal() {
             try {
-                const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
+                // Суммируем продажи
                 const terminal = parseFloat(document.getElementById("terminal").value) || 0;
                 const cash = parseFloat(document.getElementById("cash").value) || 0;
                 const transfer = parseFloat(document.getElementById("transfer").value) || 0;
-                const cashPurchase = parseFloat(document.getElementById("cashPurchase").value) || 0;
+                
+                // Выручка за день (сумма всех продаж)
+                const dailyRevenue = terminal + cash + transfer;
+                document.getElementById("revenue").innerText = dailyRevenue;
 
                 // Рассчитываем дополнительные расходы
                 let additionalExpensesTotal = 0;
@@ -333,13 +332,12 @@
                 const salaryAltynai = parseFloat(document.getElementById("salaryAltynai").value) || 0;
                 const salarySamal = parseFloat(document.getElementById("salarySamal").value) || 0;
 
-                // Расчет выручки
-                const revenue = terminal + cash + transfer + cashPurchase - cashBalance;
-                document.getElementById("revenue").innerText = revenue;
-
-                // Расчет остатка на следующий день
-                const totalExpenses = salaryAltynai + salarySamal + additionalExpensesTotal;
-                const nextDayBalance = revenue - totalExpenses;
+                // Остаток на следующий день (наличные)
+                const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
+                const cashPurchase = parseFloat(document.getElementById("cashPurchase").value) || 0;
+                const totalExpenses = salaryAltynai + salarySamal + additionalExpensesTotal + cashPurchase;
+                const nextDayBalance = cashBalance + cash - totalExpenses;
+                
                 document.getElementById("nextDayBalance").innerText = nextDayBalance;
                 document.getElementById("totalBalance").innerText = nextDayBalance;
 
@@ -365,8 +363,8 @@
         function saveToSheet() {
             try {
                 const totalBalance = document.getElementById("totalBalance").innerText;
-                if (selectedRow === 0 || totalBalance === "—") {
-                    showMessage("Выберите дату и рассчитайте итог!", true);
+                if (totalBalance === "—") {
+                    showMessage("Рассчитайте итог перед сохранением!", true);
                     return;
                 }
 
@@ -393,10 +391,9 @@
                 };
 
                 // Добавляем все поля формы
-                addField('row', selectedRow);
-                addField('value', totalBalance);
                 addField('date', selectedDate.toISOString());
                 addField('month', getSheetNameForMonth(selectedDate));
+                addField('value', totalBalance);
                 addField('terminal', document.getElementById("terminal").value);
                 addField('cash', document.getElementById("cash").value);
                 addField('transfer', document.getElementById("transfer").value);
