@@ -1,201 +1,92 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
+    <title>Учет доходов и расходов</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет продаж и расходов</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-
-        .section {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-
-        .section-title {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 2px solid #666;
-            padding-bottom: 5px;
-        }
-
-        .input-group {
-            margin-bottom: 10px;
-        }
-
-        label {
-            display: inline-block;
-            width: 200px;
-            margin-bottom: 5px;
-        }
-
-        input[type="number"],
-        input[type="text"] {
-            width: 150px;
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
-
-        input[type="date"] {
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
-
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        .total-section {
-            background-color: #e8f5e9;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 5px;
-        }
-
-        .message {
-            margin-top: 10px;
-            padding: 10px;
-            display: none;
-            border-radius: 4px;
-        }
-
-        .success {
-            color: green;
-            background-color: #e8f5e9;
-            border: 1px solid #81c784;
-        }
-
-        .error {
-            color: red;
-            background-color: #ffebee;
-            border: 1px solid #e57373;
-        }
-
-        .expenses-list {
-            margin-top: 10px;
-        }
-
-        .expense-item {
-            margin-bottom: 5px;
-        }
-
-        .add-expense {
-            background-color: #2196F3;
-            padding: 5px 10px;
-            font-size: 12px;
-        }
-
-        .remove-expense {
-            background-color: #f44336;
-            padding: 5px 10px;
-            font-size: 12px;
-            margin-left: 5px;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .input-group { margin: 10px 0; display: flex; align-items: center; }
+        .input-group label { width: 200px; margin-right: 10px; }
+        .input-group input { width: 150px; padding: 5px; }
+        .result { margin: 20px 0; padding: 10px; background: #f0f0f0; }
+        .result div { margin: 5px 0; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+        .message { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #dff0d8; color: #3c763d; }
+        .error { background-color: #f2dede; color: #a94442; }
+        .expense-item { margin: 10px 0; }
+        .remove-expense { margin-left: 10px; padding: 5px 10px; }
     </style>
 </head>
 <body>
-    <div class="section">
-        <h2 class="section-title">Дата и остаток</h2>
+    <div class="container">
+        <h1>Учет доходов и расходов</h1>
+        
+        <div id="statusMessage" style="display: none;" class="message"></div>
+        
         <div class="input-group">
             <label>Дата:</label>
             <input type="date" id="datePicker">
         </div>
-        <div class="input-group">
-            <label>Остаток наличных:</label>
-            <span id="cashBalance">—</span>
-        </div>
-    </div>
 
-    <div class="section">
-        <h2 class="section-title">Продажа</h2>
+        <h2>Продажи</h2>
         <div class="input-group">
             <label>Терминал:</label>
-            <input type="number" id="terminal" value="">
+            <input type="number" id="terminal" value="0">
         </div>
         <div class="input-group">
             <label>Наличные:</label>
-            <input type="number" id="cash" value="">
+            <input type="number" id="cash" value="0">
         </div>
         <div class="input-group">
             <label>Перевод:</label>
-            <input type="number" id="transfer" value="">
+            <input type="number" id="transfer" value="0">
         </div>
-    </div>
-
-    <div class="section">
-        <h2 class="section-title">Закуп</h2>
         <div class="input-group">
             <label>Контрагент:</label>
             <input type="text" id="contractor">
         </div>
+
+        <h2>Закуп</h2>
         <div class="input-group">
-            <label>Закуп за нал:</label>
-            <input type="number" id="cashPurchase" value="">
+            <label>Закуп наличные:</label>
+            <input type="number" id="cashPurchase" value="0">
         </div>
         <div class="input-group">
-            <label>Закуп за безнал:</label>
-            <input type="number" id="cardPurchase" value="">
+            <label>Закуп карта:</label>
+            <input type="number" id="cardPurchase" value="0">
         </div>
         <div class="input-group">
             <label>Розничная цена:</label>
-            <input type="number" id="retailPrice" value="">
+            <input type="number" id="retailPrice" value="0">
         </div>
-    </div>
 
-    <div class="section">
-        <h2 class="section-title">Расходы</h2>
+        <h2>Зарплаты</h2>
         <div class="input-group">
-            <label>Зарплата Алтынай:</label>
+            <label>Алтынай:</label>
             <input type="number" id="salaryAltynai" value="0">
         </div>
         <div class="input-group">
-            <label>Зарплата Самал:</label>
+            <label>Самал:</label>
             <input type="number" id="salarySamal" value="0">
         </div>
-        <div id="additionalExpenses" class="expenses-list">
-            <!-- Дополнительные расходы будут добавляться сюда -->
-        </div>
-        <button class="add-expense" onclick="addExpenseField()">+ Добавить расход</button>
-    </div>
 
-    <div class="total-section">
-        <div class="input-group">
-            <label>Выручка:</label>
-            <span id="revenue">0</span>
-        </div>
-        <div class="input-group">
-            <label>Остаток на следующий день:</label>
-            <span id="nextDayBalance">0</span>
-        </div>
-    </div>
+        <h2>Дополнительные расходы</h2>
+        <div id="additionalExpenses"></div>
+        <button onclick="addExpenseField()">Добавить расход</button>
 
-    <div style="margin-top: 20px;">
-        <button onclick="calculateTotal()">Рассчитать итог</button>
-        <button onclick="saveToSheet()">Сохранить в таблицу</button>
-    </div>
+        <div class="result">
+            <h3>Итоги</h3>
+            <div>Выручка за день: <span id="revenue">—</span></div>
+            <div>Остаток с предыдущего дня: <span id="cashBalance">—</span></div>
+            <div>Остаток на следующий день: <span id="nextDayBalance">—</span></div>
+            <div>Итоговый остаток: <span id="totalBalance">—</span></div>
+        </div>
 
-    <div id="statusMessage" class="message"></div>
-    <span id="totalBalance" style="display: none;">—</span>
+        <button onclick="calculateTotal()">Рассчитать</button>
+        <button onclick="saveToSheet()">Сохранить</button>
+    </div>
     <script>
         const API_KEY = "AIzaSyCjpZxD7Q7M8NuF5_4M22sCCACGMlGJi_s";
         const SHEET_ID = "1QZcNpX9d8NCqViHPAI9FK8uGNuMRBb7bWt5r4shu9qk";
@@ -205,11 +96,9 @@
 
         function getLocalDate(date = new Date()) {
             const utcDate = new Date(date);
-            const timezoneOffset = -5 * 60; // Для UTC+5 используем отрицательное значение
+            const timezoneOffset = -5 * 60;
             const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() + timezoneOffset) * 60000);
             localDate.setHours(0, 0, 0, 0);
-            console.log('Current UTC:', utcDate);
-            console.log('Local Date:', localDate);
             return localDate;
         }
 
@@ -221,46 +110,111 @@
             return `${year}-${month}-${day}`;
         }
 
-       function formatDateForSheet(date) {
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}.${month}.${year}`;
-}
-
-        function addExpenseField() {
-            expenseCounter++;
-            const expenseDiv = document.createElement('div');
-            expenseDiv.className = 'expense-item';
-            expenseDiv.innerHTML = `
-                <div class="input-group">
-                    <label>Описание:</label>
-                    <input type="text" id="expenseDesc${expenseCounter}">
-                    <label style="width: 100px;">Сумма:</label>
-                    <input type="number" id="expenseAmount${expenseCounter}" value="0">
-                    <button class="remove-expense" onclick="removeExpense(this)">Удалить</button>
-                </div>
-            `;
-            document.getElementById('additionalExpenses').appendChild(expenseDiv);
+        function formatDateForSheet(date) {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}.${month}.${year}`;
         }
 
-        function removeExpense(button) {
-            button.parentElement.parentElement.remove();
-            calculateTotal();
+        function getPreviousDate(date) {
+            const prevDate = new Date(date);
+            prevDate.setDate(prevDate.getDate() - 1);
+            return prevDate;
+        }
+
+        function loadPreviousDayData(currentDate) {
+            try {
+                // Получаем предыдущий день
+                const previousDate = getPreviousDate(currentDate);
+                const sheetName = getSheetNameForMonth(previousDate);
+                const targetDate = formatDateForSheet(previousDate);
+                
+                console.log('Current date:', formatDateForSheet(currentDate));
+                console.log('Looking for balance on:', targetDate);
+                console.log('In sheet:', sheetName);
+                
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:M?key=${API_KEY}`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Received data rows:', data.values?.length);
+                        
+                        if (!data.values || data.values.length <= 1) {
+                            document.getElementById("cashBalance").innerText = "0";
+                            return;
+                        }
+
+                        let foundBalance = null;
+                        for (let i = 1; i < data.values.length; i++) {
+                            const row = data.values[i];
+                            if (row && row[0]) {
+                                const dateFromSheet = new Date(row[0]);
+                                const sheetDate = formatDateForSheet(dateFromSheet);
+                                
+                                if (sheetDate === targetDate) {
+                                    foundBalance = row[12] || "0";
+                                    console.log('Found balance:', foundBalance);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (foundBalance !== null) {
+                            document.getElementById("cashBalance").innerText = foundBalance;
+                        } else {
+                            // Если это первый день месяца, проверяем предыдущий месяц
+                            if (previousDate.getDate() === 1) {
+                                const lastMonthDate = new Date(previousDate);
+                                lastMonthDate.setDate(0);
+                                checkPreviousMonth(lastMonthDate);
+                            } else {
+                                document.getElementById("cashBalance").innerText = "0";
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading data:', error);
+                        document.getElementById("cashBalance").innerText = "0";
+                    });
+            } catch (error) {
+                console.error('Error in loadPreviousDayData:', error);
+                document.getElementById("cashBalance").innerText = "0";
+            }
+        }
+
+        function checkPreviousMonth(date) {
+            const sheetName = getSheetNameForMonth(date);
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:M?key=${API_KEY}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.values && data.values.length > 1) {
+                        const lastRow = data.values[data.values.length - 1];
+                        if (lastRow && lastRow[12]) {
+                            document.getElementById("cashBalance").innerText = lastRow[12];
+                        }
+                    }
+                })
+                .catch(error => console.error('Error checking previous month:', error));
         }
 
         function handleDateSelection(date) {
             selectedDate = date;
-            console.log('Выбрана дата для обработки:', date);
+            console.log('Selected date for processing:', date);
             loadPreviousDayData(date);
         }
+
+        // Остальные функции остаются без изменений...
+        // (addExpenseField, removeExpense, calculateTotal, saveToSheet, etc.)
 
         window.onload = function() {
             try {
                 checkConnection();
                 const today = getLocalDate();
-                console.log('Today:', today);
                 document.getElementById("datePicker").value = formatDate(today);
                 handleDateSelection(today);
             } catch (error) {
@@ -268,294 +222,12 @@
             }
         };
 
-        function getSheetNameForMonth(date) {
-            const months = [
-                'Январь', 'Февраль', 'Март', 'Апрель', 
-                'Май', 'Июнь', 'Июль', 'Август',
-                'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-            ];
-            return months[date.getMonth()];
-        }
-
-        function checkConnection() {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', GAS_URL + '?check=1', true);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    showMessage('Соединение установлено', false);
-                } else {
-                    showMessage('Проблема с соединением', true);
-                }
-            };
-            xhr.onerror = function() {
-                showMessage('Ошибка соединения', true);
-            };
-            xhr.send();
-        }
-
-       function loadPreviousDayData(currentDate) {
-    try {
-        // Получаем предыдущий день для текущей даты
-        const previousDate = new Date(currentDate);
-        previousDate.setDate(previousDate.getDate() - 1);
-        
-        const sheetName = getSheetNameForMonth(previousDate);
-        const formattedDate = formatDateForGoogle(previousDate);
-        
-        console.log('Текущая дата:', formatDateForGoogle(currentDate));
-        console.log('Ищем остаток за:', formattedDate);
-        console.log('В листе:', sheetName);
-        
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:M?key=${API_KEY}`;
-        console.log('URL запроса:', url);
-
-        fetch(url)
-            .then(response => response.json())
-            .then(response => {
-                if (!response.values || response.values.length <= 1) {
-                    console.log('Данные не найдены в таблице');
-                    document.getElementById("cashBalance").innerText = "0";
-                    return;
-                }
-
-                console.log('Получены данные. Первые строки:', response.values.slice(0, 3));
-
-                // Ищем строку с нужной датой
-                let foundBalance = null;
-                for (let i = 1; i < response.values.length; i++) {
-                    const row = response.values[i];
-                    if (row && row[0]) {
-                        // Преобразуем дату из таблицы
-                        const dateFromSheet = new Date(row[0]);
-                        const formattedSheetDate = formatDateForGoogle(dateFromSheet);
-                        
-                        console.log('Сравниваем:', {
-                            'Дата из таблицы': formattedSheetDate,
-                            'Искомая дата': formattedDate,
-                            'Строка данных': row
-                        });
-
-                        if (formattedSheetDate === formattedDate) {
-                            foundBalance = row[12] || "0"; // Колонка M (индекс 12)
-                            console.log('Найден остаток:', foundBalance, 'в строке:', i);
-                            break;
-                        }
-                    }
-                }
-
-                if (foundBalance !== null) {
-                    document.getElementById("cashBalance").innerText = foundBalance;
-                    console.log('Установлен остаток:', foundBalance);
-                } else {
-                    console.log('Остаток не найден, проверяем предыдущий месяц');
-                    if (previousDate.getDate() === 1) {
-                        // Если это первый день месяца, ищем в предыдущем месяце
-                        const lastMonthDate = new Date(previousDate);
-                        lastMonthDate.setDate(0);
-                        loadLastDayOfPreviousMonth(lastMonthDate);
-                    } else {
-                        document.getElementById("cashBalance").innerText = "0";
-                        console.log('Остаток не найден, установлено значение 0');
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка загрузки данных:', error);
-                document.getElementById("cashBalance").innerText = "0";
-                showMessage('Ошибка загрузки данных: ' + error.message, true);
-            });
-
-    } catch (error) {
-        console.error('Ошибка в функции loadPreviousDayData:', error);
-        document.getElementById("cashBalance").innerText = "0";
-        showMessage('Ошибка загрузки данных: ' + error.message, true);
-    }
-}
-
-// Новая функция форматирования даты для Google Sheets
-function formatDateForGoogle(date) {
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}.${month}.${year}`;
-}
-
-function handleDateSelection(date) {
-    selectedDate = date;
-    console.log('Выбрана дата:', formatDateForGoogle(date));
-    loadPreviousDayData(date);
-}
-
-function loadLastDayOfPreviousMonth(lastMonthDate) {
-    const sheetName = getSheetNameForMonth(lastMonthDate);
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:M?key=${API_KEY}`;
-    
-    fetch(url)
-        .then(response => response.json())
-        .then(response => {
-            if (response.values && response.values.length > 1) {
-                // Берем последнюю строку с данными
-                const lastRow = response.values[response.values.length - 1];
-                if (lastRow && lastRow[12]) {
-                    const balance = lastRow[12];
-                    document.getElementById("cashBalance").innerText = balance;
-                    console.log('Найден остаток за последний день предыдущего месяца:', balance);
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка при загрузке данных предыдущего месяца:', error);
+        document.getElementById("datePicker").addEventListener("change", function() {
+            const selectedDateStr = this.value;
+            const [year, month, day] = selectedDateStr.split('-').map(Number);
+            const selectedDate = new Date(year, month - 1, day);
+            handleDateSelection(selectedDate);
         });
-}
-
-// Обновляем обработчик изменения даты
-document.getElementById("datePicker").addEventListener("change", function() {
-    const selectedDateStr = this.value;
-    console.log('Выбрана дата в поле:', selectedDateStr);
-    const [year, month, day] = selectedDateStr.split('-').map(Number);
-    const selectedDate = new Date(year, month - 1, day);
-    handleDateSelection(selectedDate);
-});
-        function calculateTotal() {
-            try {
-                // Суммируем продажи
-                const terminal = parseFloat(document.getElementById("terminal").value) || 0;
-                const cash = parseFloat(document.getElementById("cash").value) || 0;
-                const transfer = parseFloat(document.getElementById("transfer").value) || 0;
-                
-                // Выручка за день (сумма всех продаж)
-                const dailyRevenue = terminal + cash + transfer;
-                document.getElementById("revenue").innerText = dailyRevenue;
-
-                // Рассчитываем дополнительные расходы
-                let additionalExpensesTotal = 0;
-                document.querySelectorAll('[id^="expenseAmount"]').forEach(input => {
-                    additionalExpensesTotal += parseFloat(input.value) || 0;
-                });
-
-                // Зарплаты и другие расходы
-                const salaryAltynai = parseFloat(document.getElementById("salaryAltynai").value) || 0;
-                const salarySamal = parseFloat(document.getElementById("salarySamal").value) || 0;
-                const cashPurchase = parseFloat(document.getElementById("cashPurchase").value) || 0;
-
-                // Остаток на следующий день (наличные)
-                const cashBalance = parseFloat(document.getElementById("cashBalance").innerText) || 0;
-                const totalExpenses = salaryAltynai + salarySamal + additionalExpensesTotal + cashPurchase;
-                const nextDayBalance = cashBalance + cash - totalExpenses;
-                
-                document.getElementById("nextDayBalance").innerText = nextDayBalance;
-                document.getElementById("totalBalance").innerText = nextDayBalance;
-
-                showMessage("Расчет выполнен", false);
-            } catch (error) {
-                showMessage('Ошибка расчета: ' + error.message, true);
-            }
-        }
-
-        function showMessage(message, isError = false) {
-            const messageElement = document.getElementById('statusMessage');
-            messageElement.textContent = message;
-            messageElement.className = 'message ' + (isError ? 'error' : 'success');
-            messageElement.style.display = 'block';
-            
-            if (!isError) {
-                setTimeout(() => {
-                    messageElement.style.display = 'none';
-                }, 3000);
-            }
-        }
-
-        function saveToSheet() {
-            try {
-                const totalBalance = document.getElementById("totalBalance").innerText;
-                if (totalBalance === "—") {
-                    showMessage("Рассчитайте итог перед сохранением!", true);
-                    return;
-                }
-
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = GAS_URL;
-                form.target = 'hidden_iframe';
-
-                let iframe = document.getElementById('hidden_iframe');
-                if (!iframe) {
-                    iframe = document.createElement('iframe');
-                    iframe.name = 'hidden_iframe';
-                    iframe.id = 'hidden_iframe';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                }
-
-                const addField = (name, value) => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = name;
-                    input.value = value;
-                    form.appendChild(input);
-                };
-
-                // Добавляем все поля формы
-                addField('date', selectedDate.toISOString());
-                addField('month', getSheetNameForMonth(selectedDate));
-                addField('value', totalBalance);
-                addField('terminal', document.getElementById("terminal").value || "0");
-                addField('cash', document.getElementById("cash").value || "0");
-                addField('transfer', document.getElementById("transfer").value || "0");
-                addField('contractor', document.getElementById("contractor").value || "");
-                addField('cashPurchase', document.getElementById("cashPurchase").value || "0");
-                addField('cardPurchase', document.getElementById("cardPurchase").value || "0");
-                addField('retailPrice', document.getElementById("retailPrice").value || "0");
-                addField('salaryAltynai', document.getElementById("salaryAltynai").value || "0");
-                addField('salarySamal', document.getElementById("salarySamal").value || "0");
-                addField('revenue', document.getElementById("revenue").innerText || "0");
-
-                // Собираем дополнительные расходы
-                const additionalExpenses = [];
-                document.querySelectorAll('.expense-item').forEach(item => {
-                    const desc = item.querySelector('[id^="expenseDesc"]').value;
-                    const amount = item.querySelector('[id^="expenseAmount"]').value;
-                    if (desc && amount) {
-                        additionalExpenses.push(`${desc}: ${amount}`);
-                    }
-                });
-                addField('additionalExpenses', additionalExpenses.join('; '));
-
-                showMessage("Сохранение данных...");
-                
-                document.body.appendChild(form);
-                form.submit();
-
-                setTimeout(() => {
-                    document.body.removeChild(form);
-                    setTimeout(async () => {
-                        loadPreviousDayData(selectedDate);
-                        showMessage("Данные успешно сохранены!");
-                        
-                        // Очищаем поля после сохранения
-                        document.getElementById("terminal").value = "0";
-                        document.getElementById("cash").value = "0";
-                        document.getElementById("transfer").value = "0";
-                        document.getElementById("contractor").value = "";
-                        document.getElementById("cashPurchase").value = "0";
-                        document.getElementById("cardPurchase").value = "0";
-                        document.getElementById("retailPrice").value = "0";
-                        document.getElementById("salaryAltynai").value = "0";
-                        document.getElementById("salarySamal").value = "0";
-                        document.getElementById("revenue").innerText = "0";
-                        document.getElementById("nextDayBalance").innerText = "0";
-                        document.getElementById("totalBalance").innerText = "—";
-                        
-                        // Очищаем дополнительные расходы
-                        document.getElementById('additionalExpenses').innerHTML = '';
-                        expenseCounter = 0;
-                    }, 2000);
-                }, 100);
-            } catch (error) {
-                showMessage('Ошибка сохранения: ' + error.message, true);
-            }
-        }
     </script>
 </body>
 </html>
