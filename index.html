@@ -221,13 +221,13 @@
             return `${year}-${month}-${day}`;
         }
 
-        function formatDateForSheet(date) {
-            const d = new Date(date);
-            const day = d.getDate();
-            const month = d.getMonth() + 1;
-            const year = d.getFullYear();
-            return `${day}.${month}.${year}`;
-        }
+       function formatDateForSheet(date) {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
+}
 
         function addExpenseField() {
             expenseCounter++;
@@ -293,15 +293,19 @@
             xhr.send();
         }
 
-        function loadPreviousDayData(currentDate) {
+       function loadPreviousDayData(currentDate) {
     try {
-        const sheetName = getSheetNameForMonth(currentDate);
-        const targetDate = formatDateForSheet(currentDate);
-        console.log('Ищем в листе:', sheetName);
-        console.log('Искомая дата:', targetDate);
+        // Получаем предыдущий день
+        const previousDate = new Date(currentDate);
+        previousDate.setDate(previousDate.getDate() - 1);
+        
+        const sheetName = getSheetNameForMonth(previousDate);
+        const targetDate = formatDateForSheet(previousDate);
+        console.log('Текущая дата:', formatDateForSheet(currentDate));
+        console.log('Ищем остаток за предыдущий день:', targetDate);
+        console.log('В листе:', sheetName);
         
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A1:M100?key=${API_KEY}`;
-        console.log('URL запроса:', url);
         
         const xhr = new XMLHttpRequest();
         xhr.open('GET', url, true);
@@ -309,13 +313,6 @@
         xhr.onload = function() {
             if (xhr.status === 200) {
                 const response = JSON.parse(xhr.responseText);
-                console.log('Заголовки:', response.values?.[0]);
-                console.log('Первые несколько строк данных:');
-                if (response.values) {
-                    for (let i = 1; i < Math.min(5, response.values.length); i++) {
-                        console.log(`Строка ${i}:`, response.values[i]);
-                    }
-                }
                 
                 if (!response.values || response.values.length <= 1) {
                     console.log('Данные не найдены в таблице');
@@ -327,35 +324,12 @@
                 for (let i = 1; i < response.values.length; i++) {
                     const row = response.values[i];
                     if (row && row[0]) {
-                        // Получаем дату из таблицы и пробуем разные форматы
-                        const rawDate = row[0];
-                        console.log(`Строка ${i} - Исходная дата из таблицы:`, rawDate);
-                        
-                        let rowDate;
-                        if (typeof rawDate === 'string') {
-                            // Если дата в формате DD.MM.YYYY
-                            if (rawDate.includes('.')) {
-                                const [day, month, year] = rawDate.split('.').map(Number);
-                                rowDate = `${day}.${month}.${year}`;
-                            } 
-                            // Если дата в другом формате, пробуем преобразовать
-                            else {
-                                const dateObj = new Date(rawDate);
-                                rowDate = formatDateForSheet(dateObj);
-                            }
-                        } else {
-                            rowDate = formatDateForSheet(new Date(rawDate));
-                        }
-                        
-                        console.log(`Строка ${i} - Сравниваем даты:`, {
-                            форматированная: rowDate,
-                            искомая: targetDate,
-                            совпадают: rowDate === targetDate
-                        });
+                        const rowDate = formatDateForSheet(new Date(row[0]));
+                        console.log('Сравниваем даты:', rowDate, targetDate);
                         
                         if (rowDate === targetDate) {
-                            foundBalance = row[12] || "0";
-                            console.log('Найден остаток:', foundBalance);
+                            foundBalance = row[12] || "0"; // Колонка M (индекс 12)
+                            console.log('Найден остаток за предыдущий день:', foundBalance);
                             break;
                         }
                     }
@@ -367,6 +341,14 @@
                 } else {
                     document.getElementById("cashBalance").innerText = "0";
                     console.log('Остаток не найден, установлено значение 0');
+                    // Если это первый день месяца, попробуем поискать в предыдущем месяце
+                    if (previousDate.getDate() === 1) {
+                        const lastMonthDate = new Date(previousDate);
+                        lastMonthDate.setDate(0); // Последний день предыдущего месяца
+                        const lastMonthSheetName = getSheetNameForMonth(lastMonthDate);
+                        console.log('Ищем в предыдущем месяце:', lastMonthSheetName);
+                        loadLastDayOfPreviousMonth(lastMonthDate);
+                    }
                 }
             } else {
                 console.error('Ошибка запроса:', xhr.status);
@@ -387,6 +369,36 @@
         document.getElementById("cashBalance").innerText = "0";
         showMessage('Ошибка загрузки данных: ' + error.message, true);
     }
+}
+
+// Добавляем функцию для загрузки последнего дня предыдущего месяца
+function loadLastDayOfPreviousMonth(lastMonthDate) {
+    const sheetName = getSheetNameForMonth(lastMonthDate);
+    const targetDate = formatDateForSheet(lastMonthDate);
+    
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A1:M100?key=${API_KEY}`;
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            if (response.values && response.values.length > 1) {
+                let foundBalance = null;
+                for (let i = response.values.length - 1; i >= 1; i--) {
+                    const row = response.values[i];
+                    if (row && row[0]) {
+                        foundBalance = row[12] || "0";
+                        console.log('Найден остаток за последний день предыдущего месяца:', foundBalance);
+                        document.getElementById("cashBalance").innerText = foundBalance;
+                        break;
+                    }
+                }
+            }
+        }
+    };
+    xhr.send();
 }
         function calculateTotal() {
             try {
