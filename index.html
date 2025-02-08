@@ -204,18 +204,10 @@
         let expenseCounter = 0;
 
         function getLocalDate(date = new Date()) {
-            // Получаем текущую дату в UTC
             const utcDate = new Date(date);
-            
-            // Получаем смещение в минутах для часового пояса UTC+5
             const timezoneOffset = -5 * 60; // Для UTC+5 используем отрицательное значение
-            
-            // Создаем новую дату с учетом часового пояса
             const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() + timezoneOffset) * 60000);
-            
-            // Устанавливаем время в 00:00:00
             localDate.setHours(0, 0, 0, 0);
-            
             console.log('Current UTC:', utcDate);
             console.log('Local Date:', localDate);
             return localDate;
@@ -227,6 +219,14 @@
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const year = d.getFullYear();
             return `${year}-${month}-${day}`;
+        }
+
+        function formatDateForSheet(date) {
+            const d = new Date(date);
+            const day = d.getDate();
+            const month = d.getMonth() + 1;
+            const year = d.getFullYear();
+            return `${day}.${month}.${year}`;
         }
 
         function addExpenseField() {
@@ -250,13 +250,17 @@
             calculateTotal();
         }
 
+        function handleDateSelection(date) {
+            selectedDate = date;
+            console.log('Выбрана дата для обработки:', date);
+            loadPreviousDayData(date);
+        }
+
         window.onload = function() {
             try {
-                checkConnection(); // Проверяем соединение при загрузке
+                checkConnection();
                 const today = getLocalDate();
                 console.log('Today:', today);
-                
-                // Форматируем дату для input type="date"
                 document.getElementById("datePicker").value = formatDate(today);
                 handleDateSelection(today);
             } catch (error) {
@@ -289,90 +293,79 @@
             xhr.send();
         }
 
-       function loadPreviousDayData(currentDate) {
-    try {
-        const sheetName = getSheetNameForMonth(currentDate);
-        const targetDate = formatDateForSheet(currentDate); // Используем новую функцию форматирования
-        console.log('Ищем дату:', targetDate, 'в листе:', sheetName);
-        
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A1:M100?key=${API_KEY}`;
-        
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                const response = JSON.parse(xhr.responseText);
-                console.log('Получены данные:', response);
+        function loadPreviousDayData(currentDate) {
+            try {
+                const sheetName = getSheetNameForMonth(currentDate);
+                const targetDate = formatDateForSheet(currentDate);
+                console.log('Ищем дату:', targetDate, 'в листе:', sheetName);
                 
-                if (!response.values || response.values.length <= 1) {
-                    console.log('Данные не найдены в таблице');
-                    document.getElementById("cashBalance").innerText = "0";
-                    return;
-                }
-
-                // Ищем строку с нужной датой
-                let foundBalance = null;
-                for (let i = 1; i < response.values.length; i++) {
-                    const row = response.values[i];
-                    if (row && row[0]) {
-                        const rowDate = formatDateForSheet(new Date(row[0]));
-                        console.log('Сравниваем:', rowDate, targetDate);
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A1:M100?key=${API_KEY}`;
+                
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', url, true);
+                
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        console.log('Получены данные:', response);
                         
-                        if (rowDate === targetDate) {
-                            foundBalance = row[12] || "0"; // Колонка M (индекс 12)
-                            console.log('Найден остаток:', foundBalance);
-                            break;
+                        if (!response.values || response.values.length <= 1) {
+                            console.log('Данные не найдены в таблице');
+                            document.getElementById("cashBalance").innerText = "0";
+                            return;
                         }
+
+                        let foundBalance = null;
+                        for (let i = 1; i < response.values.length; i++) {
+                            const row = response.values[i];
+                            if (row && row[0]) {
+                                const rowDate = formatDateForSheet(new Date(row[0]));
+                                console.log('Сравниваем:', rowDate, targetDate);
+                                
+                                if (rowDate === targetDate) {
+                                    foundBalance = row[12] || "0"; // Колонка M (индекс 12)
+                                    console.log('Найден остаток:', foundBalance);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (foundBalance !== null) {
+                            document.getElementById("cashBalance").innerText = foundBalance;
+                            console.log('Установлен остаток:', foundBalance);
+                        } else {
+                            document.getElementById("cashBalance").innerText = "0";
+                            console.log('Остаток не найден, установлено значение 0');
+                        }
+                    } else {
+                        console.error('Ошибка запроса:', xhr.status);
+                        document.getElementById("cashBalance").innerText = "0";
+                        showMessage('Ошибка загрузки данных', true);
                     }
-                }
-
-                // Если нашли остаток, показываем его
-                if (foundBalance !== null) {
-                    document.getElementById("cashBalance").innerText = foundBalance;
-                    console.log('Установлен остаток:', foundBalance);
-                } else {
+                };
+                
+                xhr.onerror = function() {
+                    console.error('Ошибка сети');
                     document.getElementById("cashBalance").innerText = "0";
-                    console.log('Остаток не найден, установлено значение 0');
-                }
-            } else {
-                console.error('Ошибка запроса:', xhr.status);
+                    showMessage('Ошибка сети при загрузке данных', true);
+                };
+                
+                xhr.send();
+            } catch (error) {
+                console.error('Ошибка в функции loadPreviousDayData:', error);
                 document.getElementById("cashBalance").innerText = "0";
-                showMessage('Ошибка загрузки данных', true);
+                showMessage('Ошибка загрузки данных: ' + error.message, true);
             }
-        };
-        
-        xhr.onerror = function() {
-            console.error('Ошибка сети');
-            document.getElementById("cashBalance").innerText = "0";
-            showMessage('Ошибка сети при загрузке данных', true);
-        };
-        
-        xhr.send();
-    } catch (error) {
-        console.error('Ошибка в функции loadPreviousDayData:', error);
-        document.getElementById("cashBalance").innerText = "0";
-        showMessage('Ошибка загрузки данных: ' + error.message, true);
-    }
-}
+        }
 
-// Новая функция форматирования даты для сравнения с форматом в таблице
-function formatDateForSheet(date) {
-    const d = new Date(date);
-    const day = d.getDate();
-    const month = d.getMonth() + 1;
-    const year = d.getFullYear();
-    return `${day}.${month}.${year}`; // формат ДД.ММ.ГГГГ
-}
+        document.getElementById("datePicker").addEventListener("change", function() {
+            const selectedDateStr = this.value;
+            const [year, month, day] = selectedDateStr.split('-').map(Number);
+            const selectedDate = new Date(year, month - 1, day);
+            console.log('Выбрана дата:', selectedDate);
+            handleDateSelection(selectedDate);
+        });
 
-// Обновляем обработчик изменения даты
-document.getElementById("datePicker").addEventListener("change", function() {
-    const selectedDateStr = this.value;
-    const [year, month, day] = selectedDateStr.split('-').map(Number);
-    const selectedDate = new Date(year, month - 1, day);
-    console.log('Выбрана дата:', selectedDate);
-    handleDateSelection(selectedDate);
-});
         function calculateTotal() {
             try {
                 // Суммируем продажи
