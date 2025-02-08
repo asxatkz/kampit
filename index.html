@@ -295,41 +295,49 @@
 
        function loadPreviousDayData(currentDate) {
     try {
-        // Получаем предыдущий день
+        // Получаем предыдущий день для текущей даты
         const previousDate = new Date(currentDate);
         previousDate.setDate(previousDate.getDate() - 1);
         
         const sheetName = getSheetNameForMonth(previousDate);
-        const targetDate = formatDateForSheet(previousDate);
-        console.log('Текущая дата:', formatDateForSheet(currentDate));
-        console.log('Ищем остаток за предыдущий день:', targetDate);
+        const formattedDate = formatDateForGoogle(previousDate);
+        
+        console.log('Текущая дата:', formatDateForGoogle(currentDate));
+        console.log('Ищем остаток за:', formattedDate);
         console.log('В листе:', sheetName);
         
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A1:M100?key=${API_KEY}`;
-        
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                const response = JSON.parse(xhr.responseText);
-                
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:M?key=${API_KEY}`;
+        console.log('URL запроса:', url);
+
+        fetch(url)
+            .then(response => response.json())
+            .then(response => {
                 if (!response.values || response.values.length <= 1) {
                     console.log('Данные не найдены в таблице');
                     document.getElementById("cashBalance").innerText = "0";
                     return;
                 }
 
+                console.log('Получены данные. Первые строки:', response.values.slice(0, 3));
+
+                // Ищем строку с нужной датой
                 let foundBalance = null;
                 for (let i = 1; i < response.values.length; i++) {
                     const row = response.values[i];
                     if (row && row[0]) {
-                        const rowDate = formatDateForSheet(new Date(row[0]));
-                        console.log('Сравниваем даты:', rowDate, targetDate);
+                        // Преобразуем дату из таблицы
+                        const dateFromSheet = new Date(row[0]);
+                        const formattedSheetDate = formatDateForGoogle(dateFromSheet);
                         
-                        if (rowDate === targetDate) {
+                        console.log('Сравниваем:', {
+                            'Дата из таблицы': formattedSheetDate,
+                            'Искомая дата': formattedDate,
+                            'Строка данных': row
+                        });
+
+                        if (formattedSheetDate === formattedDate) {
                             foundBalance = row[12] || "0"; // Колонка M (индекс 12)
-                            console.log('Найден остаток за предыдущий день:', foundBalance);
+                            console.log('Найден остаток:', foundBalance, 'в строке:', i);
                             break;
                         }
                     }
@@ -339,31 +347,24 @@
                     document.getElementById("cashBalance").innerText = foundBalance;
                     console.log('Установлен остаток:', foundBalance);
                 } else {
-                    document.getElementById("cashBalance").innerText = "0";
-                    console.log('Остаток не найден, установлено значение 0');
-                    // Если это первый день месяца, попробуем поискать в предыдущем месяце
+                    console.log('Остаток не найден, проверяем предыдущий месяц');
                     if (previousDate.getDate() === 1) {
+                        // Если это первый день месяца, ищем в предыдущем месяце
                         const lastMonthDate = new Date(previousDate);
-                        lastMonthDate.setDate(0); // Последний день предыдущего месяца
-                        const lastMonthSheetName = getSheetNameForMonth(lastMonthDate);
-                        console.log('Ищем в предыдущем месяце:', lastMonthSheetName);
+                        lastMonthDate.setDate(0);
                         loadLastDayOfPreviousMonth(lastMonthDate);
+                    } else {
+                        document.getElementById("cashBalance").innerText = "0";
+                        console.log('Остаток не найден, установлено значение 0');
                     }
                 }
-            } else {
-                console.error('Ошибка запроса:', xhr.status);
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки данных:', error);
                 document.getElementById("cashBalance").innerText = "0";
-                showMessage('Ошибка загрузки данных', true);
-            }
-        };
-        
-        xhr.onerror = function() {
-            console.error('Ошибка сети');
-            document.getElementById("cashBalance").innerText = "0";
-            showMessage('Ошибка сети при загрузке данных', true);
-        };
-        
-        xhr.send();
+                showMessage('Ошибка загрузки данных: ' + error.message, true);
+            });
+
     } catch (error) {
         console.error('Ошибка в функции loadPreviousDayData:', error);
         document.getElementById("cashBalance").innerText = "0";
@@ -371,35 +372,51 @@
     }
 }
 
-// Добавляем функцию для загрузки последнего дня предыдущего месяца
+// Новая функция форматирования даты для Google Sheets
+function formatDateForGoogle(date) {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
+}
+
+function handleDateSelection(date) {
+    selectedDate = date;
+    console.log('Выбрана дата:', formatDateForGoogle(date));
+    loadPreviousDayData(date);
+}
+
 function loadLastDayOfPreviousMonth(lastMonthDate) {
     const sheetName = getSheetNameForMonth(lastMonthDate);
-    const targetDate = formatDateForSheet(lastMonthDate);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:M?key=${API_KEY}`;
     
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A1:M100?key=${API_KEY}`;
-    
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    
-    xhr.onload = function() {
-        if (xhr.status === 200) {
-            const response = JSON.parse(xhr.responseText);
+    fetch(url)
+        .then(response => response.json())
+        .then(response => {
             if (response.values && response.values.length > 1) {
-                let foundBalance = null;
-                for (let i = response.values.length - 1; i >= 1; i--) {
-                    const row = response.values[i];
-                    if (row && row[0]) {
-                        foundBalance = row[12] || "0";
-                        console.log('Найден остаток за последний день предыдущего месяца:', foundBalance);
-                        document.getElementById("cashBalance").innerText = foundBalance;
-                        break;
-                    }
+                // Берем последнюю строку с данными
+                const lastRow = response.values[response.values.length - 1];
+                if (lastRow && lastRow[12]) {
+                    const balance = lastRow[12];
+                    document.getElementById("cashBalance").innerText = balance;
+                    console.log('Найден остаток за последний день предыдущего месяца:', balance);
                 }
             }
-        }
-    };
-    xhr.send();
+        })
+        .catch(error => {
+            console.error('Ошибка при загрузке данных предыдущего месяца:', error);
+        });
 }
+
+// Обновляем обработчик изменения даты
+document.getElementById("datePicker").addEventListener("change", function() {
+    const selectedDateStr = this.value;
+    console.log('Выбрана дата в поле:', selectedDateStr);
+    const [year, month, day] = selectedDateStr.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day);
+    handleDateSelection(selectedDate);
+});
         function calculateTotal() {
             try {
                 // Суммируем продажи
