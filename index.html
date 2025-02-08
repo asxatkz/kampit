@@ -206,19 +206,27 @@
         function getLocalDate(date = new Date()) {
             // Получаем текущую дату в UTC
             const utcDate = new Date(date);
-            // Добавляем смещение для UTC+5
-            const localDate = new Date(utcDate.getTime() + (5 * 60 * 60 * 1000));
             
-            // Если время между 00:00 и 05:00, возвращаем предыдущий день
-            if (localDate.getHours() >= 0 && localDate.getHours() < 5) {
-                localDate.setDate(localDate.getDate() - 1);
-            }
+            // Получаем смещение в минутах для часового пояса UTC+5
+            const timezoneOffset = -5 * 60; // Для UTC+5 используем отрицательное значение
+            
+            // Создаем новую дату с учетом часового пояса
+            const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() + timezoneOffset) * 60000);
             
             // Устанавливаем время в 00:00:00
             localDate.setHours(0, 0, 0, 0);
-            console.log('UTC Date:', utcDate);
+            
+            console.log('Current UTC:', utcDate);
             console.log('Local Date:', localDate);
             return localDate;
+        }
+
+        function formatDate(date) {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${year}-${month}-${day}`;
         }
 
         function addExpenseField() {
@@ -246,8 +254,10 @@
             try {
                 checkConnection(); // Проверяем соединение при загрузке
                 const today = getLocalDate();
-                console.log('Local date:', today);
-                document.getElementById("datePicker").valueAsDate = today;
+                console.log('Today:', today);
+                
+                // Форматируем дату для input type="date"
+                document.getElementById("datePicker").value = formatDate(today);
                 handleDateSelection(today);
             } catch (error) {
                 showMessage('Ошибка при загрузке: ' + error.message, true);
@@ -281,11 +291,9 @@
 
         function loadPreviousDayData(currentDate) {
             try {
-                const previousDay = new Date(currentDate);
-                previousDay.setDate(currentDate.getDate() - 1);
-                
-                const sheetName = getSheetNameForMonth(previousDay);
-                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!M1:M100?key=${API_KEY}`;
+                const sheetName = getSheetNameForMonth(currentDate);
+                const selectedDateStr = formatDate(currentDate);
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:M?key=${API_KEY}`;
                 
                 const xhr = new XMLHttpRequest();
                 xhr.open('GET', url, true);
@@ -295,16 +303,21 @@
                         const response = JSON.parse(xhr.responseText);
                         const values = response.values || [];
                         
-                        // Берем последнее непустое значение
-                        let lastValue = "0";
-                        for (let i = values.length - 1; i >= 0; i--) {
-                            if (values[i] && values[i][0]) {
-                                lastValue = values[i][0];
-                                break;
+                        // Ищем строку с выбранной датой
+                        let balance = "0";
+                        for (let i = 1; i < values.length; i++) {
+                            const row = values[i];
+                            if (row && row[0]) {
+                                const rowDate = formatDate(new Date(row[0]));
+                                if (rowDate === selectedDateStr) {
+                                    // Колонка M (индекс 12) содержит остаток
+                                    balance = row[12] || "0";
+                                    break;
+                                }
                             }
                         }
                         
-                        document.getElementById("cashBalance").innerText = lastValue;
+                        document.getElementById("cashBalance").innerText = balance;
                     } else {
                         document.getElementById("cashBalance").innerText = "0";
                         showMessage('Ошибка загрузки данных', true);
@@ -330,9 +343,10 @@
         }
 
         document.getElementById("datePicker").addEventListener("change", function() {
-            const selectedDate = new Date(this.value);
-            const localDate = getLocalDate(selectedDate);
-            handleDateSelection(localDate);
+            const selectedDateStr = this.value;
+            const [year, month, day] = selectedDateStr.split('-').map(Number);
+            const selectedDate = new Date(Date.UTC(year, month - 1, day));
+            handleDateSelection(selectedDate);
         });
 
         function calculateTotal() {
